@@ -10,7 +10,7 @@ and counting the products accurately
 - **Product Description**: Extracts text from images using OCR to provide details such as product name, brand, etc.
 - **Product Count**: Detects and counts the number of products in an image using Object Detection.
 - **Freshness Detection**: Analyzes the freshness of perishable items (e.g., fruits or vegetables) using a trained model.
--**Brand Recognition**:It recognize the brand , alert the user if the brand is fake
-  
+- **Brand Recognition**: Recognizes the brand of a product and alerts the user if the brand appears to be counterfeit or fake.
+
 
 
