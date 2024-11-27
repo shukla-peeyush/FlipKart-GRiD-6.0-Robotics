@@ -3,3 +3,7 @@ pandas==2.0.3
 tensorflow==2.13.0
 Flask==2.3.2
 requests==2.31.0
+ultralytics==8.3.37
+Python=3.12.3
+Flask=3.1.0
+Werkzeug=3.1.3
