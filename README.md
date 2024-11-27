@@ -14,3 +14,17 @@ and counting the products accurately
 
 
 
+
+### Steps to Run the Project
+1. Clone the repository:
+
+```bash
+   git clone https://github.com/nivethaa09/FlipKart-GRiD-6.0-Robotics.git
+cd smart-quality-test-system
+
+pip install -r requirements.txt
+
+python app.py
+
+
+
