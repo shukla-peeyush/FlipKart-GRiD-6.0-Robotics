@@ -19,8 +19,8 @@ and counting the products accurately
 1. Clone the repository:
 
 ```bash
-   git clone https://github.com/nivethaa09/FlipKart-GRiD-6.0-Robotics.git
-cd smart-quality-test-system
+git clone https://github.com/nivethaa09/FlipKart-GRiD-6.0-Robotics.git
+cd FlipKart-GRiD-6.0-Robotics
 
 pip install -r requirements.txt
 
