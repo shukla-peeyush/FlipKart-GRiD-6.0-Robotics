@@ -42,4 +42,10 @@ def process_realtime_video(source):
     cap.release()
     cv2.destroyAllWindows()
 
-process_realtime_video(0)
+# Commented out to prevent automatic camera access when imported
+# Uncomment the line below if you want to run real-time video processing
+# process_realtime_video(0)
+
+if __name__ == "__main__":
+    # Only run real-time video when script is executed directly
+    process_realtime_video(0)
