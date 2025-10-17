@@ -8,7 +8,7 @@ import ResultCard from './components/ResultCard';
 import CameraModal from './components/CameraModal';
 import LoginModal from './components/LoginModal';
 import EditProfileModal from './components/EditProfileModal';
-import { getCurrentUser, logout as apiLogout, analyzeImage, getHistory } from './utils/api';
+import { getCurrentUser, logout as apiLogout, analyzeImage, getHistory, deleteHistoryItem } from './utils/api';
 import type { NavigationPage, ServiceType, InputMethod, AnalysisResponse, User, HistoryItem } from './types';
 
 function App() {
@@ -27,6 +27,8 @@ function App() {
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedHistoryItem, setSelectedHistoryItem] = useState<HistoryItem | null>(null);
 
   // Check authentication status on app load
   useEffect(() => {
@@ -73,22 +75,43 @@ function App() {
   const loadUserHistory = async () => {
     try {
       const historyData = await getHistory();
+      console.log('Raw history data from API:', historyData); // Debug log
+      
       // Convert to HistoryItem format
-      const historyItems: HistoryItem[] = historyData.map(item => ({
-        ...item,
-        userId: currentUser?.id || '',
-        imageName: item.imageName || 'Analysis Result',
-        savedToHistory: true
-      }));
+      const historyItems: HistoryItem[] = historyData
+        .filter(item => {
+          console.log('Filtering item:', item, 'has id:', item.id !== undefined); // Debug log
+          return item.id !== undefined;
+        })
+        .map(item => ({
+          ...item,
+          id: item.id!,
+          userId: currentUser?.id || '',
+          imageName: item.imageName || 'Analysis Result',
+          savedToHistory: true
+        }));
+      
+      console.log('Processed history items:', historyItems); // Debug log
       setHistory(historyItems);
     } catch (error) {
       console.error('Failed to load history:', error);
+      // If authentication error, redirect to login
+      if (error instanceof Error && error.message.includes('401')) {
+        setIsLoggedIn(false);
+        setCurrentUser(null);
+        setShowLoginModal(true);
+      }
     }
   };
 
   // Handlers
   const handleNavigation = (page: NavigationPage) => {
     setCurrentPage(page);
+    
+    // Load history when navigating to History page
+    if (page === 'History') {
+      loadUserHistory();
+    }
   };
 
   const handleToggleSidebar = () => {
@@ -181,26 +204,51 @@ function App() {
     setShowEditProfileModal(false);
   };
 
-  const handleSaveToHistory = () => {
-    if (!analysisResults || !currentUser) return;
+
+  const handleDeleteHistoryItem = async (historyId: number, index: number) => {
+    if (!confirm('Are you sure you want to delete this analysis? This action cannot be undone.')) {
+      return;
+    }
     
-    const historyItem: HistoryItem = {
-      ...analysisResults,
-      userId: currentUser.id,
-      imageName: selectedFile ? selectedFile.name : 'Camera Capture',
-      imageUrl: capturedImage || undefined,
-      savedToHistory: true
-    };
+    try {
+      await deleteHistoryItem(historyId);
+      setHistory(prev => prev.filter((_, i) => i !== index));
+      alert('Analysis deleted successfully!');
+    } catch (error: any) {
+      console.error('Failed to delete history item:', error);
+      alert(`Failed to delete analysis: ${error.message}`);
+    }
+  };
+
+  const handleViewDetails = (item: HistoryItem) => {
+    setSelectedHistoryItem(item);
+    setShowDetailsModal(true);
+  };
+
+  const handleReanalyze = (item: HistoryItem) => {
+    // Clear current state
+    setSelectedFile(null);
+    setCapturedImage(null);
+    setAnalysisResults(null);
     
-    setHistory(prev => [historyItem, ...prev]);
-    alert('Analysis saved to history successfully!');
+    // Try to determine which services were used based on results
+    const usedServices: ServiceType[] = [];
+    if (item.results.ocr) usedServices.push('OCR');
+    if (item.results.productCount) usedServices.push('ProductCount');
+    if (item.results.freshness) usedServices.push('Freshness');
+    if (item.results.brand) usedServices.push('BrandRecognition');
+    
+    setSelectedServices(usedServices);
+    
+    // Navigate to NewTest page
+    setCurrentPage('NewTest');
+    
+    // Show message to user
+    alert(`Ready to re-analyze! Please upload the image again and click "Analyze Image". Services pre-selected: ${usedServices.join(', ')}`);
   };
 
   const handleResultAction = (service: ServiceType, action: string) => {
     switch (action) {
-      case 'save':
-        handleSaveToHistory();
-        break;
       case 'copy':
         // Copy text to clipboard (for OCR)
         if (analysisResults?.results.ocr?.text) {
@@ -330,11 +378,6 @@ function App() {
                     <button className="btn-secondary text-sm">
                       Download Report
                     </button>
-                    <button 
-                      className="btn-secondary text-sm"
-                      onClick={handleSaveToHistory}>
-                      Save to History
-                    </button>
                   </div>
                 </div>
                 
@@ -450,15 +493,19 @@ function App() {
                         Job ID: {item.jobId}
                       </div>
                       <div className="flex space-x-2">
-                        <button className="btn-secondary text-xs py-1 px-2">
+                        <button 
+                          className="btn-secondary text-xs py-1 px-2"
+                          onClick={() => handleViewDetails(item)}>
                           View Details
                         </button>
-                        <button className="btn-secondary text-xs py-1 px-2">
+                        <button 
+                          className="btn-secondary text-xs py-1 px-2"
+                          onClick={() => handleReanalyze(item)}>
                           Re-analyze
                         </button>
                         <button 
                           className="text-red-600 hover:text-red-700 text-xs px-2"
-                          onClick={() => setHistory(prev => prev.filter((_, i) => i !== index))}>
+                          onClick={() => handleDeleteHistoryItem(item.id, index)}>
                           Delete
                         </button>
                       </div>
@@ -849,6 +896,193 @@ function App() {
           onSave={handleEditProfile}
           onClose={() => setShowEditProfileModal(false)}
         />
+      )}
+
+      {/* Details Modal */}
+      {showDetailsModal && selectedHistoryItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">Analysis Details</h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  {selectedHistoryItem.imageName} • {new Date(selectedHistoryItem.metadata.processedAt).toLocaleString()}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowDetailsModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Only show services that have results */}
+                {selectedHistoryItem.results.ocr && (
+                  <div className="card">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                      </div>
+                      <h3 className="font-medium text-gray-900">OCR (Text Recognition)</h3>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-3 text-sm">
+                      <p className="whitespace-pre-wrap">{selectedHistoryItem.results.ocr.text || 'No text detected'}</p>
+                    </div>
+                    <div className="mt-3 flex space-x-2">
+                      <button 
+                        className="btn-secondary text-xs"
+                        onClick={() => {
+                          if (selectedHistoryItem.results.ocr?.text) {
+                            navigator.clipboard.writeText(selectedHistoryItem.results.ocr.text);
+                            alert('Text copied to clipboard!');
+                          }
+                        }}>
+                        Copy Text
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {selectedHistoryItem.results.productCount && (
+                  <div className="card">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                        <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                        </svg>
+                      </div>
+                      <h3 className="font-medium text-gray-900">Product Count</h3>
+                    </div>
+                    <div className="text-center py-4">
+                      <div className="text-3xl font-bold text-green-600">
+                        {selectedHistoryItem.results.productCount.total}
+                      </div>
+                      <div className="text-sm text-gray-500">Products Detected</div>
+                    </div>
+                    {selectedHistoryItem.results.productCount.detections && selectedHistoryItem.results.productCount.detections.length > 0 && (
+                      <div className="mt-3">
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">Detections:</h4>
+                        <div className="space-y-1">
+                          {selectedHistoryItem.results.productCount.detections.map((detection, idx) => (
+                            <div key={idx} className="text-xs bg-gray-50 rounded p-2">
+                              <span className="font-medium">{detection.label}</span>
+                              <span className="text-gray-500 ml-2">
+                                ({Math.round(detection.confidence * 100)}% confidence)
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {selectedHistoryItem.results.freshness && (
+                  <div className="card">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                        <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707" />
+                        </svg>
+                      </div>
+                      <h3 className="font-medium text-gray-900">Freshness Detection</h3>
+                    </div>
+                    <div className="text-center py-4">
+                      <div className="text-3xl font-bold text-orange-600">
+                        {selectedHistoryItem.results.freshness.score}
+                      </div>
+                      <div className="text-sm text-gray-500">Freshness Score</div>
+                      <div className="mt-2">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          selectedHistoryItem.results.freshness.label === 'Fresh' ? 'bg-green-100 text-green-800' :
+                          selectedHistoryItem.results.freshness.label === 'Not Fresh' ? 'bg-red-100 text-red-800' :
+                          'bg-orange-100 text-orange-800'
+                        }`}>
+                          {selectedHistoryItem.results.freshness.label}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {selectedHistoryItem.results.brand && (
+                  <div className="card">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <h3 className="font-medium text-gray-900">Brand Recognition</h3>
+                    </div>
+                    {selectedHistoryItem.results.brand.matches && selectedHistoryItem.results.brand.matches.length > 0 ? (
+                      <div className="space-y-2">
+                        {selectedHistoryItem.results.brand.matches.map((match, idx) => (
+                          <div key={idx} className="bg-gray-50 rounded-lg p-3">
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-gray-900">{match.brand}</span>
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                match.isCounterfeit ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                              }`}>
+                                {match.isCounterfeit ? 'Counterfeit' : 'Authentic'}
+                              </span>
+                            </div>
+                            <div className="text-sm text-gray-500 mt-1">
+                              Confidence: {Math.round(match.confidence * 100)}%
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-4 text-gray-500">
+                        No brands detected
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-6 pt-6 border-t">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">Job ID: {selectedHistoryItem.jobId}</p>
+                    <p className="text-sm text-gray-500">Status: {selectedHistoryItem.status}</p>
+                  </div>
+                  <div className="flex space-x-3">
+                    <button 
+                      className="btn-secondary text-sm"
+                      onClick={() => {
+                        const dataStr = JSON.stringify(selectedHistoryItem, null, 2);
+                        const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                        const url = URL.createObjectURL(dataBlob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = `analysis-${selectedHistoryItem.jobId}.json`;
+                        link.click();
+                        URL.revokeObjectURL(url);
+                      }}>
+                      Export Data
+                    </button>
+                    <button 
+                      className="btn-primary text-sm"
+                      onClick={() => {
+                        setShowDetailsModal(false);
+                        handleReanalyze(selectedHistoryItem);
+                      }}>
+                      Re-analyze
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

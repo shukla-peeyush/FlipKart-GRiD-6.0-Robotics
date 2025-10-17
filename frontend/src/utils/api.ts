@@ -1,6 +1,6 @@
 import type { ServiceType, AnalysisResponse, AnalysisStatus, User as UserType } from '../types';
 
-const BASE_URL = 'http://localhost:5000';
+const BASE_URL = 'http://localhost:5001';
 
 // Convert ServiceType to string for API
 export const serviceTypeToString = (service: ServiceType): string => {
@@ -135,6 +135,24 @@ export const getAnalysisStatus = async (jobId: string): Promise<AnalysisResponse
   }
 };
 
+// Delete history item
+export const deleteHistoryItem = async (historyId: number): Promise<void> => {
+  try {
+    const response = await fetch(`${BASE_URL}/api/history/${historyId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP ${response.status}`);
+    }
+  } catch (error) {
+    console.error('Delete history item error:', error);
+    throw error;
+  }
+};
+
 // Get history
 export const getHistory = async (): Promise<AnalysisResponse[]> => {
   try {
@@ -149,29 +167,30 @@ export const getHistory = async (): Promise<AnalysisResponse[]> => {
     
     const data = await response.json();
     
-    // Transform array of responses and normalize result keys
-    return data.map((item: any) => {
-      const results = item.results || {};
-      
-      // Transform product_count to productCount for consistency
-      const normalizedResults = {
-        ...results,
-        productCount: results.product_count || results.productCount,
-      };
-      
-      // Remove the old key to avoid confusion
-      delete normalizedResults.product_count;
-      
-      return {
-        jobId: item.jobId || 'unknown',
-        status: stringToAnalysisStatus(item.status),
-        results: normalizedResults,
-        imageName: item.imageName || 'Analysis Result',
-        metadata: {
-          processedAt: item.metadata?.processedAt || new Date().toISOString()
-        }
-      } as any;
-    });
+  // Transform array of responses and normalize result keys
+  return data.map((item: any) => {
+    const results = item.results || {};
+    
+    // Transform product_count to productCount for consistency
+    const normalizedResults = {
+      ...results,
+      productCount: results.product_count || results.productCount,
+    };
+    
+    // Remove the old key to avoid confusion
+    delete normalizedResults.product_count;
+    
+    return {
+      id: item.id, // Include the database ID
+      jobId: item.jobId || 'unknown',
+      status: stringToAnalysisStatus(item.status),
+      results: normalizedResults,
+      imageName: item.imageName || 'Analysis Result',
+      metadata: {
+        processedAt: item.metadata?.processedAt || new Date().toISOString()
+      }
+    } as any;
+  });
   } catch (error) {
     console.error('API Error:', error);
     throw error;

@@ -247,7 +247,7 @@ def get_user_history():
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
     cursor.execute('''
-        SELECT job_id, image_name, services, results, status, created_at
+        SELECT id, job_id, image_name, services, results, status, created_at
         FROM analysis_history 
         WHERE user_id = ? 
         ORDER BY created_at DESC
@@ -256,18 +256,46 @@ def get_user_history():
     history = []
     for row in cursor.fetchall():
         history.append({
-            'jobId': row[0],
-            'imageName': row[1],
-            'services': row[2].split(',') if row[2] else [],
-            'results': eval(row[3]) if row[3] else {},
-            'status': row[4],
+            'id': row[0],
+            'jobId': row[1],
+            'imageName': row[2],
+            'services': row[3].split(',') if row[3] else [],
+            'results': eval(row[4]) if row[4] else {},
+            'status': row[5],
             'metadata': {
-                'processedAt': row[5]
+                'processedAt': row[6]
             }
         })
     
     conn.close()
     return jsonify(history), 200
+
+@app.route('/api/history/<int:history_id>', methods=['DELETE'])
+@require_auth
+def delete_history_item(history_id):
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    
+    # Check if the history item exists and belongs to the current user
+    cursor.execute('''
+        SELECT id FROM analysis_history 
+        WHERE id = ? AND user_id = ?
+    ''', (history_id, session['user_id']))
+    
+    if not cursor.fetchone():
+        conn.close()
+        return jsonify({'error': 'History item not found or access denied'}), 404
+    
+    # Delete the history item
+    cursor.execute('''
+        DELETE FROM analysis_history 
+        WHERE id = ? AND user_id = ?
+    ''', (history_id, session['user_id']))
+    
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'message': 'History item deleted successfully'}), 200
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -414,4 +442,4 @@ if __name__ == '__main__':
     # Initialize database
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     init_db()
-    app.run(debug=True)
+    app.run(debug=True, port=5001)

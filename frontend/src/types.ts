@@ -61,6 +61,7 @@ export interface AnalysisMetadata {
 }
 
 export interface AnalysisResponse {
+  id?: number;
   jobId: string;
   status: AnalysisStatus;
   results: AnalysisResults;
@@ -98,6 +99,7 @@ export interface User {
 }
 
 export interface HistoryItem extends AnalysisResponse {
+  id: number;
   userId: string;
   imageName: string;
   imageUrl?: string;
