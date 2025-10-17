@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BarChart3, TrendingUp } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import UploadArea from './components/UploadArea';
@@ -8,6 +9,7 @@ import ResultCard from './components/ResultCard';
 import CameraModal from './components/CameraModal';
 import LoginModal from './components/LoginModal';
 import EditProfileModal from './components/EditProfileModal';
+import Dashboard from './components/Dashboard';
 import { getCurrentUser, logout as apiLogout, analyzeImage, getHistory, deleteHistoryItem } from './utils/api';
 import type { NavigationPage, ServiceType, InputMethod, AnalysisResponse, User, HistoryItem } from './types';
 
@@ -280,32 +282,138 @@ function App() {
   // Show login screen if not authenticated
   if (!isLoggedIn || !currentUser) {
     return (
-      <div className="flex h-screen bg-gray-50">
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="flex items-center justify-center w-20 h-20 bg-blue-600 rounded-lg mx-auto mb-6">
-              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="min-h-screen bg-slate-950 text-white overflow-hidden relative">
+        {/* Animated Background */}
+        <motion.div
+          className="absolute inset-0"
+          animate={{
+            background: [
+              "radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%), radial-gradient(circle at 40% 40%, rgba(120, 200, 255, 0.3) 0%, transparent 50%)",
+              "radial-gradient(circle at 60% 20%, rgba(120, 119, 198, 0.3) 0%, transparent 50%), radial-gradient(circle at 20% 80%, rgba(255, 119, 198, 0.3) 0%, transparent 50%), radial-gradient(circle at 80% 60%, rgba(120, 200, 255, 0.3) 0%, transparent 50%)",
+              "radial-gradient(circle at 80% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%), radial-gradient(circle at 40% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%), radial-gradient(circle at 20% 40%, rgba(120, 200, 255, 0.3) 0%, transparent 50%)",
+            ],
+          }}
+          transition={{
+            duration: 15,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
+
+        {/* Floating Particles */}
+        <div className="absolute inset-0 pointer-events-none">
+          {Array.from({ length: 50 }, (_, i) => (
+            <motion.div
+              key={i}
+              className="absolute bg-white/20 rounded-full blur-sm"
+              style={{
+                width: Math.random() * 4 + 1,
+                height: Math.random() * 4 + 1,
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+              }}
+              animate={{
+                y: [0, -100, 0],
+                x: [0, Math.random() * 50 - 25, 0],
+                opacity: [0, 1, 0],
+                scale: [0, 1, 0],
+              }}
+              transition={{
+                duration: Math.random() * 20 + 10,
+                repeat: Infinity,
+                delay: Math.random() * 5,
+                ease: "easeInOut",
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Glass Overlay */}
+        <div className="absolute inset-0 bg-slate-900/20 backdrop-blur-sm" />
+        
+        <div className="relative z-10 flex h-screen items-center justify-center">
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-center"
+          >
+            <motion.div
+              className="flex items-center justify-center w-24 h-24 bg-gradient-to-br from-cyan-400 to-purple-500 rounded-2xl mx-auto mb-8 shadow-2xl"
+              whileHover={{ scale: 1.1, rotate: 5 }}
+              animate={{ 
+                boxShadow: [
+                  "0 0 20px rgba(6, 182, 212, 0.3)",
+                  "0 0 40px rgba(147, 51, 234, 0.4)", 
+                  "0 0 20px rgba(6, 182, 212, 0.3)"
+                ]
+              }}
+              transition={{ 
+                boxShadow: { duration: 2, repeat: Infinity },
+                scale: { duration: 0.2 },
+                rotate: { duration: 0.2 }
+              }}
+            >
+              <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
                   d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
               </svg>
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Smart Quality Test System</h1>
-            <p className="text-gray-600 mb-8">Please sign in to access the analysis platform</p>
-            <button 
+            </motion.div>
+            
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.8 }}
+              className="text-5xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-4"
+            >
+              QualityAI
+            </motion.h1>
+            
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.8 }}
+              className="text-gray-300 text-xl mb-12 max-w-md mx-auto"
+            >
+              Smart Quality Test System
+              <br />
+              <span className="text-sm text-gray-400">Please sign in to access the AI analysis platform</span>
+            </motion.p>
+            
+            <motion.button
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6, duration: 0.8 }}
               onClick={() => setShowLoginModal(true)}
-              className="btn-primary">
-              Sign In
-            </button>
-          </div>
+              className="relative px-8 py-4 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-xl font-semibold text-white shadow-2xl transition-all duration-300 group overflow-hidden"
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              {/* Button glow effect */}
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-purple-400 opacity-0 group-hover:opacity-50 blur-xl transition-opacity duration-300"
+                animate={{
+                  scale: [1, 1.2, 1],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                }}
+              />
+              <span className="relative z-10">Enter Platform</span>
+            </motion.button>
+          </motion.div>
         </div>
         
         {/* Login Modal */}
-        {showLoginModal && (
-          <LoginModal
-            onLogin={handleLogin}
-            onClose={() => setShowLoginModal(false)}
-          />
-        )}
+        <AnimatePresence>
+          {showLoginModal && (
+            <LoginModal
+              onLogin={handleLogin}
+              onClose={() => setShowLoginModal(false)}
+            />
+          )}
+        </AnimatePresence>
       </div>
     );
   }
@@ -399,35 +507,10 @@ function App() {
 
       case 'Dashboard':
         return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-semibold text-gray-900">Dashboard</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* Stats cards */}
-              <div className="card">
-                <div className="flex items-center">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-600">Total Analyses</p>
-                    <p className="text-2xl font-semibold text-gray-900">1,247</p>
-                  </div>
-                  <div className="p-3 bg-blue-100 rounded-lg">
-                    <BarChart3 className="w-6 h-6 text-blue-600" />
-                  </div>
-                </div>
-              </div>
-              
-              <div className="card">
-                <div className="flex items-center">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-600">Success Rate</p>
-                    <p className="text-2xl font-semibold text-gray-900">94.2%</p>
-                  </div>
-                  <div className="p-3 bg-green-100 rounded-lg">
-                    <TrendingUp className="w-6 h-6 text-green-600" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <Dashboard 
+            userName={currentUser.name}
+            history={history}
+          />
         );
 
       case 'History':
@@ -497,11 +580,6 @@ function App() {
                           className="btn-secondary text-xs py-1 px-2"
                           onClick={() => handleViewDetails(item)}>
                           View Details
-                        </button>
-                        <button 
-                          className="btn-secondary text-xs py-1 px-2"
-                          onClick={() => handleReanalyze(item)}>
-                          Re-analyze
                         </button>
                         <button 
                           className="text-red-600 hover:text-red-700 text-xs px-2"
@@ -859,7 +937,7 @@ function App() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
       {/* Sidebar */}
       <Sidebar
         currentPage={currentPage}
@@ -882,26 +960,44 @@ function App() {
       </div>
 
       {/* Camera Modal */}
-      {showCameraModal && (
-        <CameraModal
-          onCapture={handleCameraCapture}
-          onClose={() => setShowCameraModal(false)}
-        />
-      )}
+      <AnimatePresence>
+        {showCameraModal && (
+          <CameraModal
+            onCapture={handleCameraCapture}
+            onClose={() => setShowCameraModal(false)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Edit Profile Modal */}
-      {showEditProfileModal && currentUser && (
-        <EditProfileModal
-          user={currentUser}
-          onSave={handleEditProfile}
-          onClose={() => setShowEditProfileModal(false)}
-        />
-      )}
+      <AnimatePresence>
+        {showEditProfileModal && currentUser && (
+          <EditProfileModal
+            user={currentUser}
+            onSave={handleEditProfile}
+            onClose={() => setShowEditProfileModal(false)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Details Modal */}
-      {showDetailsModal && selectedHistoryItem && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <AnimatePresence>
+        {showDetailsModal && selectedHistoryItem && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+            onClick={() => setShowDetailsModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ type: "spring", duration: 0.5 }}
+              className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
             <div className="flex items-center justify-between p-6 border-b">
               <div>
                 <h2 className="text-xl font-semibold text-gray-900">Analysis Details</h2>
@@ -1054,36 +1150,27 @@ function App() {
                     <p className="text-sm text-gray-500">Job ID: {selectedHistoryItem.jobId}</p>
                     <p className="text-sm text-gray-500">Status: {selectedHistoryItem.status}</p>
                   </div>
-                  <div className="flex space-x-3">
-                    <button 
-                      className="btn-secondary text-sm"
-                      onClick={() => {
-                        const dataStr = JSON.stringify(selectedHistoryItem, null, 2);
-                        const dataBlob = new Blob([dataStr], {type: 'application/json'});
-                        const url = URL.createObjectURL(dataBlob);
-                        const link = document.createElement('a');
-                        link.href = url;
-                        link.download = `analysis-${selectedHistoryItem.jobId}.json`;
-                        link.click();
-                        URL.revokeObjectURL(url);
-                      }}>
-                      Export Data
-                    </button>
-                    <button 
-                      className="btn-primary text-sm"
-                      onClick={() => {
-                        setShowDetailsModal(false);
-                        handleReanalyze(selectedHistoryItem);
-                      }}>
-                      Re-analyze
-                    </button>
-                  </div>
+                  <button 
+                    className="btn-secondary text-sm"
+                    onClick={() => {
+                      const dataStr = JSON.stringify(selectedHistoryItem, null, 2);
+                      const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                      const url = URL.createObjectURL(dataBlob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = `analysis-${selectedHistoryItem.jobId}.json`;
+                      link.click();
+                      URL.revokeObjectURL(url);
+                    }}>
+                    Export Data
+                  </button>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

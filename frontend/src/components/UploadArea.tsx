@@ -156,8 +156,12 @@ const UploadArea: React.FC<UploadAreaProps> = ({
                 Click below to open camera and capture an image
               </p>
               <button 
+                type="button"
                 className="btn-primary"
-                onClick={onOpenCamera}>
+                onClick={() => {
+                  console.log('Opening camera...');
+                  onOpenCamera();
+                }}>
                 Open Camera
               </button>
             </div>

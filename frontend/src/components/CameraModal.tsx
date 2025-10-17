@@ -84,8 +84,8 @@ const CameraModal: React.FC<CameraModalProps> = ({ onCapture, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
           <h3 className="text-lg font-semibold flex items-center">
@@ -100,26 +100,34 @@ const CameraModal: React.FC<CameraModalProps> = ({ onCapture, onClose }) => {
         </div>
 
         {/* Camera View */}
-        <div className="relative bg-black">
+        <div className="relative bg-black flex-1 flex items-center justify-center min-h-[400px]">
           {isLoading && (
-            <div className="flex items-center justify-center h-64">
+            <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-white text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
-                <p>Starting camera...</p>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+                <p className="text-lg">Starting camera...</p>
+                <p className="text-sm text-gray-300 mt-2">Please allow camera access when prompted</p>
               </div>
             </div>
           )}
 
           {error && (
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center text-white p-4">
-                <p className="mb-4">{error}</p>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center text-white p-4 max-w-md">
+                <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Camera className="w-8 h-8" />
+                </div>
+                <p className="text-lg font-semibold mb-2">Camera Access Error</p>
+                <p className="mb-4 text-gray-300">{error}</p>
                 <button 
                   onClick={startCamera}
                   className="btn-primary flex items-center mx-auto">
                   <RotateCcw className="w-4 h-4 mr-2" />
-                  Retry
+                  Try Again
                 </button>
+                <p className="text-xs text-gray-400 mt-4">
+                  Make sure you've allowed camera access in your browser settings
+                </p>
               </div>
             </div>
           )}
@@ -128,7 +136,7 @@ const CameraModal: React.FC<CameraModalProps> = ({ onCapture, onClose }) => {
             <>
               <video
                 ref={videoRef}
-                className="w-full h-auto max-h-96 object-cover"
+                className="w-full h-full object-contain"
                 autoPlay
                 playsInline
                 muted
