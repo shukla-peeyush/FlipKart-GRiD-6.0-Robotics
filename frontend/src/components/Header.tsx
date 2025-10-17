@@ -1,13 +1,14 @@
 import React from 'react';
 import { Menu, User } from 'lucide-react';
-import type { NavigationPage } from '../types';
+import type { NavigationPage, User as UserType } from '../types';
 
 interface HeaderProps {
   currentPage: NavigationPage;
   onToggleSidebar: () => void;
+  currentUser?: UserType | null;
 }
 
-const Header: React.FC<HeaderProps> = ({ currentPage, onToggleSidebar }) => {
+const Header: React.FC<HeaderProps> = ({ currentPage, onToggleSidebar, currentUser }) => {
   const pageTitle = {
     Dashboard: 'Dashboard',
     NewTest: 'New Test',
@@ -56,10 +57,20 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onToggleSidebar }) => {
           
           <div className="relative group">
             <div className="flex items-center space-x-2 cursor-pointer">
-              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                <User className="w-5 h-5 text-gray-600" />
-              </div>
-              <span className="hidden sm:block text-sm font-medium text-gray-700">User</span>
+              {currentUser?.avatar ? (
+                <img
+                  src={`http://localhost:5001${currentUser.avatar}`}
+                  alt={currentUser.name}
+                  className="w-8 h-8 rounded-full object-cover border-2 border-blue-200"
+                />
+              ) : (
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center border-2 border-blue-200">
+                  <span className="text-sm font-semibold text-blue-600">
+                    {currentUser?.name.split(' ').map(n => n[0]).join('') || 'U'}
+                  </span>
+                </div>
+              )}
+              <span className="hidden sm:block text-sm font-medium text-gray-700">{currentUser?.name || 'User'}</span>
               <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
               </svg>

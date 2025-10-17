@@ -300,6 +300,50 @@ export const updateProfile = async (name: string, email: string): Promise<UserTy
   }
 };
 
+export const uploadAvatar = async (file: File): Promise<UserType> => {
+  try {
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    const response = await fetch(`${BASE_URL}/api/auth/upload-avatar`, {
+      method: 'POST',
+      credentials: 'include',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Avatar upload failed');
+    }
+
+    const data = await response.json();
+    return data.user;
+  } catch (error) {
+    console.error('Upload avatar error:', error);
+    throw error;
+  }
+};
+
+export const deleteAvatar = async (): Promise<UserType> => {
+  try {
+    const response = await fetch(`${BASE_URL}/api/auth/delete-avatar`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Avatar deletion failed');
+    }
+
+    const data = await response.json();
+    return data.user;
+  } catch (error) {
+    console.error('Delete avatar error:', error);
+    throw error;
+  }
+};
+
 // Test API connection
 export const testConnection = async (): Promise<boolean> => {
   try {

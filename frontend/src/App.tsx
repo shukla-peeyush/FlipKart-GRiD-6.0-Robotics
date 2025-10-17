@@ -10,6 +10,9 @@ import CameraModal from './components/CameraModal';
 import LoginModal from './components/LoginModal';
 import EditProfileModal from './components/EditProfileModal';
 import Dashboard from './components/Dashboard';
+import LiveDetectionModal from './components/LiveDetectionModal';
+import Toast from './components/Toast';
+import type { ToastMessage } from './components/Toast';
 import { getCurrentUser, logout as apiLogout, analyzeImage, getHistory, deleteHistoryItem } from './utils/api';
 import type { NavigationPage, ServiceType, InputMethod, AnalysisResponse, User, HistoryItem } from './types';
 
@@ -24,6 +27,7 @@ function App() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResults, setAnalysisResults] = useState<AnalysisResponse | null>(null);
   const [showCameraModal, setShowCameraModal] = useState(false);
+  const [showLiveDetectionModal, setShowLiveDetectionModal] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
@@ -31,6 +35,17 @@ function App() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<HistoryItem | null>(null);
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  // Toast helper function
+  const showToast = (type: 'success' | 'error' | 'info', message: string, duration?: number) => {
+    const id = Date.now().toString();
+    setToasts(prev => [...prev, { id, type, message, duration }]);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  };
 
   // Check authentication status on app load
   useEffect(() => {
@@ -77,14 +92,10 @@ function App() {
   const loadUserHistory = async () => {
     try {
       const historyData = await getHistory();
-      console.log('Raw history data from API:', historyData); // Debug log
       
       // Convert to HistoryItem format
       const historyItems: HistoryItem[] = historyData
-        .filter(item => {
-          console.log('Filtering item:', item, 'has id:', item.id !== undefined); // Debug log
-          return item.id !== undefined;
-        })
+        .filter(item => item.id !== undefined)
         .map(item => ({
           ...item,
           id: item.id!,
@@ -93,7 +104,6 @@ function App() {
           savedToHistory: true
         }));
       
-      console.log('Processed history items:', historyItems); // Debug log
       setHistory(historyItems);
     } catch (error) {
       console.error('Failed to load history:', error);
@@ -126,7 +136,11 @@ function App() {
   };
 
   const handleOpenCamera = () => {
-    setShowCameraModal(true);
+    if (inputMethod === 'LiveDetection') {
+      setShowLiveDetectionModal(true);
+    } else {
+      setShowCameraModal(true);
+    }
   };
 
   const handleCameraCapture = (imageData: string) => {
@@ -147,12 +161,12 @@ function App() {
 
   const handleAnalyze = async () => {
     if (selectedServices.length === 0) {
-      alert('Please select at least one service');
+      showToast('error', 'Please select at least one service');
       return;
     }
     
     if (!selectedFile && !capturedImage) {
-      alert('Please select an image to analyze');
+      showToast('error', 'Please select an image to analyze');
       return;
     }
 
@@ -163,15 +177,17 @@ function App() {
         selectedFile,
         capturedImage,
         selectedServices,
-        (message) => console.log(`Progress: ${message}`)
+        () => {}
       );
       
       setAnalysisResults(response);
-      // Reload history after successful analysis
+      showToast('success', 'Analysis completed successfully!');
+      
+      // Reload history after successful analysis (results are already saved by backend)
       loadUserHistory();
     } catch (error: any) {
       console.error('Analysis error:', error);
-      alert(`Analysis failed: ${error.message || 'Unknown error'}`);
+      showToast('error', `Analysis failed: ${error.message || 'Unknown error'}`);
     } finally {
       setIsAnalyzing(false);
     }
@@ -204,6 +220,8 @@ function App() {
   const handleEditProfile = (updatedUser: User) => {
     setCurrentUser(updatedUser);
     setShowEditProfileModal(false);
+    // Force re-render by creating new object
+    setCurrentUser({...updatedUser});
   };
 
 
@@ -215,10 +233,10 @@ function App() {
     try {
       await deleteHistoryItem(historyId);
       setHistory(prev => prev.filter((_, i) => i !== index));
-      alert('Analysis deleted successfully!');
+      showToast('success', 'Analysis deleted successfully!');
     } catch (error: any) {
       console.error('Failed to delete history item:', error);
-      alert(`Failed to delete analysis: ${error.message}`);
+      showToast('error', `Failed to delete analysis: ${error.message}`);
     }
   };
 
@@ -246,7 +264,7 @@ function App() {
     setCurrentPage('NewTest');
     
     // Show message to user
-    alert(`Ready to re-analyze! Please upload the image again and click "Analyze Image". Services pre-selected: ${usedServices.join(', ')}`);
+    showToast('info', `Ready to re-analyze! Please upload the image again and click "Analyze Image".\n\nServices pre-selected: ${usedServices.join(', ')}`, 5000);
   };
 
   const handleResultAction = (service: ServiceType, action: string) => {
@@ -255,7 +273,7 @@ function App() {
         // Copy text to clipboard (for OCR)
         if (analysisResults?.results.ocr?.text) {
           navigator.clipboard.writeText(analysisResults.results.ocr.text);
-          alert('Text copied to clipboard!');
+          showToast('success', 'Text copied to clipboard!');
         }
         break;
       case 'export':
@@ -510,6 +528,8 @@ function App() {
           <Dashboard 
             userName={currentUser.name}
             history={history}
+            onNavigate={handleNavigation}
+            showToast={showToast}
           />
         );
 
@@ -949,8 +969,10 @@ function App() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <Header
+          key={currentUser?.avatar || 'no-avatar'}
           currentPage={currentPage}
           onToggleSidebar={handleToggleSidebar}
+          currentUser={currentUser}
         />
 
         {/* Page content */}
@@ -969,6 +991,15 @@ function App() {
         )}
       </AnimatePresence>
 
+      {/* Live Detection Modal */}
+      <AnimatePresence>
+        {showLiveDetectionModal && (
+          <LiveDetectionModal
+            onClose={() => setShowLiveDetectionModal(false)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Edit Profile Modal */}
       <AnimatePresence>
         {showEditProfileModal && currentUser && (
@@ -979,6 +1010,9 @@ function App() {
           />
         )}
       </AnimatePresence>
+
+      {/* Toast Notifications */}
+      <Toast toasts={toasts} onRemove={removeToast} />
 
       {/* Details Modal */}
       <AnimatePresence>
@@ -1033,12 +1067,12 @@ function App() {
                     <div className="mt-3 flex space-x-2">
                       <button 
                         className="btn-secondary text-xs"
-                        onClick={() => {
-                          if (selectedHistoryItem.results.ocr?.text) {
-                            navigator.clipboard.writeText(selectedHistoryItem.results.ocr.text);
-                            alert('Text copied to clipboard!');
-                          }
-                        }}>
+                      onClick={() => {
+                        if (selectedHistoryItem.results.ocr?.text) {
+                          navigator.clipboard.writeText(selectedHistoryItem.results.ocr.text);
+                          showToast('success', 'Text copied to clipboard!');
+                        }
+                      }}>
                         Copy Text
                       </button>
                     </div>

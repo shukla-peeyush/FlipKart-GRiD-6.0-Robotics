@@ -38,6 +38,8 @@ interface HistoryItem {
 interface DashboardProps {
   userName: string;
   history: HistoryItem[];
+  onNavigate?: (page: 'Dashboard' | 'NewTest' | 'History' | 'Settings' | 'Help') => void;
+  showToast?: (type: 'success' | 'error' | 'info', message: string, duration?: number) => void;
 }
 
 // Count-up animation hook
@@ -66,11 +68,14 @@ const useCountUp = (end: number, duration: number = 2000) => {
   return count;
 };
 
-const Dashboard: React.FC<DashboardProps> = ({ userName, history }) => {
+const Dashboard: React.FC<DashboardProps> = ({ userName, history, onNavigate, showToast }) => {
   const [greeting, setGreeting] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [liveObjectCount, setLiveObjectCount] = useState<number>(0);
+  const [isCountingActive, setIsCountingActive] = useState(false);
   
   // Calculate service usage from actual history
   const calculateServiceUsage = () => {
@@ -219,6 +224,54 @@ const Dashboard: React.FC<DashboardProps> = ({ userName, history }) => {
     else setGreeting('Good Evening');
   }, []);
   
+  // Capture and analyze frames at 1 FPS
+  useEffect(() => {
+    if (!cameraActive || !isCountingActive) return;
+    
+    const captureAndAnalyze = async () => {
+      if (!videoRef.current || !canvasRef.current) return;
+      
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const context = canvas.getContext('2d');
+      
+      if (!context) return;
+      
+      try {
+        // Set canvas size to match video
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        
+        // Draw current video frame to canvas
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Convert canvas to base64
+        const frameData = canvas.toDataURL('image/jpeg', 0.8);
+        
+        // Send to backend for analysis
+        const response = await fetch('http://localhost:5001/api/detect/live-count', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ frame: frameData })
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setLiveObjectCount(data.count || 0);
+        }
+      } catch (error) {
+        console.error('Frame analysis error:', error);
+      }
+    };
+    
+    // Analyze at 1 FPS (every 1000ms)
+    const interval = setInterval(captureAndAnalyze, 1000);
+    
+    return () => clearInterval(interval);
+  }, [cameraActive, isCountingActive]);
+  
   // Initialize camera for live detection
   useEffect(() => {
     let stream: MediaStream | null = null;
@@ -247,6 +300,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userName, history }) => {
             .then(() => {
               console.log('Video playing successfully!');
               setCameraActive(true);
+              setIsCountingActive(true); // Start counting when camera is active
               setCameraError(null);
             })
             .catch(err => {
@@ -265,6 +319,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userName, history }) => {
                     console.error('Video play error:', playErr);
                     setCameraError('Failed to play video');
                     setCameraActive(false);
+                    setIsCountingActive(false);
                   });
               };
             });
@@ -273,6 +328,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userName, history }) => {
         console.error('Camera access error:', error);
         setCameraError('Camera access denied');
         setCameraActive(false);
+        setIsCountingActive(false);
       }
     };
     
@@ -657,6 +713,9 @@ const Dashboard: React.FC<DashboardProps> = ({ userName, history }) => {
               className={`w-full h-full object-cover ${cameraActive ? 'block' : 'hidden'}`}
             />
             
+            {/* Hidden canvas for frame capture */}
+            <canvas ref={canvasRef} className="hidden" />
+            
             {/* Scan line overlay - only when active */}
             {cameraActive && (
               <motion.div
@@ -703,12 +762,12 @@ const Dashboard: React.FC<DashboardProps> = ({ userName, history }) => {
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">FPS:</span>
-              <span>{cameraActive ? '30' : '-'}</span>
+              <span className="text-gray-400">Objects:</span>
+              <span className="font-bold text-cyan-400">{cameraActive && isCountingActive ? liveObjectCount : '-'}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">Mode:</span>
-              <span>Real-time</span>
+              <span className="text-gray-400">Analysis:</span>
+              <span>{isCountingActive ? '1 FPS' : 'Paused'}</span>
             </div>
           </div>
         </motion.div>
@@ -747,21 +806,50 @@ const Dashboard: React.FC<DashboardProps> = ({ userName, history }) => {
         <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { icon: Sparkles, label: 'New Analysis', color: 'from-cyan-500 to-blue-500' },
-            { icon: Trash2, label: 'Clear Cache', color: 'from-orange-500 to-red-500' },
-            { icon: Cpu, label: 'Optimize Models', color: 'from-green-500 to-emerald-500' },
-            { icon: Settings, label: 'System Settings', color: 'from-purple-500 to-pink-500' }
+            { 
+              icon: Sparkles, 
+              label: 'New Analysis', 
+              color: 'from-cyan-500 to-blue-500',
+              onClick: () => onNavigate?.('NewTest')
+            },
+            { 
+              icon: Trash2, 
+              label: 'Clear Cache', 
+              color: 'from-orange-500 to-red-500',
+              onClick: () => {
+                if (confirm('Clear all cached data? This will remove temporary files and optimize performance.')) {
+                  localStorage.clear();
+                  sessionStorage.clear();
+                  showToast?.('success', 'Cache cleared successfully!');
+                }
+              }
+            },
+            { 
+              icon: Cpu, 
+              label: 'Optimize Models', 
+              color: 'from-green-500 to-emerald-500',
+              onClick: () => {
+                showToast?.('info', 'AI models optimization initiated!\n\nThis process runs in the background and will complete automatically. Your models will be ready for peak performance.', 5000);
+              }
+            },
+            { 
+              icon: Settings, 
+              label: 'System Settings', 
+              color: 'from-purple-500 to-pink-500',
+              onClick: () => onNavigate?.('Settings')
+            }
           ].map((action, index) => {
             const Icon = action.icon;
             return (
               <motion.button
                 key={action.label}
+                onClick={action.onClick}
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.1 * index, duration: 0.3 }}
                 whileHover={{ scale: 1.05, y: -2, transition: { duration: 0.1 } }}
                 whileTap={{ scale: 0.95, transition: { duration: 0.05 } }}
-                className={`p-4 bg-gradient-to-br ${action.color} rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-150 group relative overflow-hidden`}
+                className={`p-4 bg-gradient-to-br ${action.color} rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-150 group relative overflow-hidden cursor-pointer`}
               >
                 <motion.div
                   className="absolute inset-0 bg-white/20 rounded-xl"

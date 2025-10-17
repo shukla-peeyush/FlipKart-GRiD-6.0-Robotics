@@ -38,7 +38,9 @@ app = Flask(__name__)
 CORS(app, supports_credentials=True, origins=['http://localhost:5174', 'http://localhost:5173'])  # Enable CORS for frontend with credentials
 app.secret_key = secrets.token_hex(16)  # For session management
 UPLOAD_FOLDER = 'static/uploads'
+PROFILE_PICTURES_FOLDER = 'static/profile_pictures'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['PROFILE_PICTURES_FOLDER'] = PROFILE_PICTURES_FOLDER
 
 # Database setup
 def init_db():
@@ -51,10 +53,19 @@ def init_db():
             name TEXT NOT NULL,
             password_hash TEXT NOT NULL,
             role TEXT DEFAULT 'user',
+            profile_picture TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             last_login TIMESTAMP
         )
     ''')
+    
+    # Add profile_picture column to existing tables (migration)
+    try:
+        cursor.execute('ALTER TABLE users ADD COLUMN profile_picture TEXT')
+        conn.commit()
+    except sqlite3.OperationalError:
+        # Column already exists
+        pass
     
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS analysis_history (
@@ -97,7 +108,11 @@ def require_auth(f):
 def get_user_by_id(user_id):
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))
+    # Use column names to avoid index issues
+    cursor.execute('''
+        SELECT id, email, name, role, created_at, last_login, profile_picture 
+        FROM users WHERE id = ?
+    ''', (user_id,))
     user = cursor.fetchone()
     conn.close()
     if user:
@@ -105,9 +120,10 @@ def get_user_by_id(user_id):
             'id': str(user[0]),
             'email': user[1],
             'name': user[2],
-            'role': user[4],
-            'created_at': user[5],
-            'last_login': user[6]
+            'role': user[3],
+            'createdAt': user[4],
+            'lastLogin': user[5],
+            'avatar': user[6] if user[6] else None
         }
     return None
 
@@ -123,7 +139,11 @@ def login():
     
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM users WHERE email = ?', (email,))
+    # Use explicit column names
+    cursor.execute('''
+        SELECT id, email, name, password_hash, role, created_at, last_login, profile_picture 
+        FROM users WHERE email = ?
+    ''', (email,))
     user = cursor.fetchone()
     
     if user and user[3] == hash_password(password):
@@ -141,7 +161,8 @@ def login():
             'name': user[2],
             'role': user[4],
             'createdAt': user[5],
-            'lastLogin': datetime.datetime.now().isoformat()
+            'lastLogin': datetime.datetime.now().isoformat(),
+            'avatar': user[7] if user[7] else None
         }
         
         conn.close()
@@ -190,6 +211,7 @@ def signup():
         'email': email,
         'name': name,
         'role': 'user',
+        'avatar': None,
         'createdAt': datetime.datetime.now().isoformat(),
         'lastLogin': datetime.datetime.now().isoformat()
     }
@@ -240,6 +262,83 @@ def update_profile():
     
     user = get_user_by_id(session['user_id'])
     return jsonify({'user': user, 'message': 'Profile updated successfully'}), 200
+
+@app.route('/api/auth/upload-avatar', methods=['POST'])
+@require_auth
+def upload_avatar():
+    if 'avatar' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+    
+    file = request.files['avatar']
+    
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    
+    # Validate file type
+    allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+    file_ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+    
+    if file_ext not in allowed_extensions:
+        return jsonify({'error': 'Invalid file type. Allowed: PNG, JPG, JPEG, GIF, WEBP'}), 400
+    
+    # Generate unique filename
+    filename = f"user_{session['user_id']}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.{file_ext}"
+    file_path = os.path.join(app.config['PROFILE_PICTURES_FOLDER'], filename)
+    
+    # Save file
+    file.save(file_path)
+    
+    # Update database
+    avatar_url = f'/static/profile_pictures/{filename}'
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    
+    # Delete old profile picture if exists
+    cursor.execute('SELECT profile_picture FROM users WHERE id = ?', (session['user_id'],))
+    old_avatar = cursor.fetchone()
+    if old_avatar and old_avatar[0]:
+        old_file_path = old_avatar[0].replace('/static/', 'static/')
+        if os.path.exists(old_file_path):
+            try:
+                os.remove(old_file_path)
+            except:
+                pass
+    
+    cursor.execute('UPDATE users SET profile_picture = ? WHERE id = ?',
+                  (avatar_url, session['user_id']))
+    conn.commit()
+    conn.close()
+    
+    user = get_user_by_id(session['user_id'])
+    return jsonify({'user': user, 'avatar': avatar_url, 'message': 'Avatar uploaded successfully'}), 200
+
+@app.route('/api/auth/delete-avatar', methods=['DELETE'])
+@require_auth
+def delete_avatar():
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    
+    # Get current avatar
+    cursor.execute('SELECT profile_picture FROM users WHERE id = ?', (session['user_id'],))
+    avatar = cursor.fetchone()
+    
+    if avatar and avatar[0]:
+        # Delete file
+        file_path = avatar[0].replace('/static/', 'static/')
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except:
+                pass
+        
+        # Update database
+        cursor.execute('UPDATE users SET profile_picture = NULL WHERE id = ?', (session['user_id'],))
+        conn.commit()
+    
+    conn.close()
+    
+    user = get_user_by_id(session['user_id'])
+    return jsonify({'user': user, 'message': 'Avatar deleted successfully'}), 200
 
 @app.route('/api/history', methods=['GET'])
 @require_auth
@@ -296,6 +395,55 @@ def delete_history_item(history_id):
     conn.close()
     
     return jsonify({'message': 'History item deleted successfully'}), 200
+
+@app.route('/api/detect/live-count', methods=['POST'])
+def live_object_count():
+    """Process a single frame for live object counting"""
+    try:
+        data = request.get_json()
+        frame_data = data.get('frame')
+        include_boxes = data.get('include_boxes', False)
+        
+        if not frame_data:
+            return jsonify({'error': 'No frame data provided'}), 400
+        
+        # Decode base64 image
+        import cv2
+        import numpy as np
+        
+        # Remove data URL prefix if present
+        if ',' in frame_data:
+            frame_data = frame_data.split(',')[1]
+        
+        # Decode base64 to image
+        img_bytes = base64.b64decode(frame_data)
+        nparr = np.frombuffer(img_bytes, np.uint8)
+        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        
+        if frame is None:
+            return jsonify({'error': 'Failed to decode frame'}), 400
+        
+        # Use existing object counting function
+        from detection.object_count import count_and_draw_products
+        annotated_frame, count = count_and_draw_products(frame.copy())
+        
+        response_data = {
+            'count': count,
+            'timestamp': datetime.datetime.now().isoformat()
+        }
+        
+        # Include annotated frame if requested
+        if include_boxes:
+            # Encode annotated frame to base64
+            _, buffer = cv2.imencode('.jpg', annotated_frame)
+            annotated_base64 = base64.b64encode(buffer).decode('utf-8')
+            response_data['annotated_frame'] = f'data:image/jpeg;base64,{annotated_base64}'
+        
+        return jsonify(response_data), 200
+        
+    except Exception as e:
+        print(f"Live count error: {e}")
+        return jsonify({'error': str(e), 'count': 0}), 500
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -439,7 +587,8 @@ def capture_image():
         return jsonify({'error': str(e), 'job_id': job_id, 'status': 'Failed'}), 500
 
 if __name__ == '__main__':
-    # Initialize database
+    # Initialize database and folders
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    os.makedirs(PROFILE_PICTURES_FOLDER, exist_ok=True)
     init_db()
     app.run(debug=True, port=5001)

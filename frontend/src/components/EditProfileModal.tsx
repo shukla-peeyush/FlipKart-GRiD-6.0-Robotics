@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { X, User, Mail, Save } from 'lucide-react';
-import { updateProfile } from '../utils/api';
+import React, { useState, useRef } from 'react';
+import { X, User, Mail, Save, Camera, Trash2 } from 'lucide-react';
+import { updateProfile, uploadAvatar, deleteAvatar } from '../utils/api';
 import type { User as UserType } from '../types';
 
 interface EditProfileModalProps {
@@ -17,6 +17,9 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ user, onSave, onClo
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,10 +30,20 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ user, onSave, onClo
       // Validate form
       if (!formData.name.trim() || !formData.email.trim()) {
         setError('Name and email are required');
+        setIsLoading(false);
         return;
       }
 
-      const updatedUser = await updateProfile(formData.name.trim(), formData.email.trim());
+      // Upload avatar first if selected
+      let updatedUser = user;
+      if (selectedAvatarFile) {
+        updatedUser = await uploadAvatar(selectedAvatarFile);
+      }
+
+      // Then update profile details
+      updatedUser = await updateProfile(formData.name.trim(), formData.email.trim());
+      
+      // Pass updated user to parent
       onSave(updatedUser);
       onClose();
     } catch (err: any) {
@@ -38,6 +51,71 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ user, onSave, onClo
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Image size must be less than 5MB');
+        return;
+      }
+
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        setError('Please select a valid image file (JPG, PNG, GIF, WEBP)');
+        return;
+      }
+
+      setSelectedAvatarFile(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+      setError('');
+    }
+  };
+
+  const handleDeleteAvatar = async () => {
+    if (!confirm('Are you sure you want to delete your profile picture?')) {
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const updatedUser = await deleteAvatar();
+      
+      setAvatarPreview(null);
+      setSelectedAvatarFile(null);
+      
+      // Update parent state and close modal
+      onSave(updatedUser);
+      onClose();
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete avatar');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getAvatarDisplay = () => {
+    // Show preview if new file selected
+    if (avatarPreview) {
+      return avatarPreview;
+    }
+    // Show existing avatar from server
+    if (user.avatar) {
+      return `http://localhost:5001${user.avatar}`;
+    }
+    // No avatar - return null to show initials
+    return null;
   };
 
   const handleInputChange = (field: keyof typeof formData, value: string) => {
@@ -64,12 +142,60 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ user, onSave, onClo
         <div className="p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Avatar Section */}
-            <div className="flex justify-center">
-              <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center">
-                <span className="text-2xl font-semibold text-blue-600">
-                  {formData.name.split(' ').map(n => n[0]).join('')}
-                </span>
+            <div className="flex flex-col items-center space-y-3">
+              <div className="relative">
+                {getAvatarDisplay() ? (
+                  <img
+                    src={getAvatarDisplay()!}
+                    alt="Profile"
+                    className="w-24 h-24 rounded-full object-cover border-4 border-blue-100"
+                  />
+                ) : (
+                  <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center border-4 border-blue-200">
+                    <span className="text-3xl font-semibold text-blue-600">
+                      {formData.name.split(' ').map(n => n[0]).join('')}
+                    </span>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute bottom-0 right-0 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-lg"
+                >
+                  <Camera className="w-4 h-4" />
+                </button>
               </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarSelect}
+                className="hidden"
+              />
+              <div className="flex space-x-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="text-sm text-blue-600 hover:text-blue-700"
+                >
+                  Change Photo
+                </button>
+                {(user.avatar || avatarPreview) && (
+                  <>
+                    <span className="text-gray-300">|</span>
+                    <button
+                      type="button"
+                      onClick={handleDeleteAvatar}
+                      disabled={isLoading}
+                      className="text-sm text-red-600 hover:text-red-700 flex items-center space-x-1"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Remove</span>
+                    </button>
+                  </>
+                )}
+              </div>
+              <p className="text-xs text-gray-500">JPG, PNG, GIF or WEBP. Max size 5MB.</p>
             </div>
 
             <div>

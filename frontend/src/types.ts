@@ -69,7 +69,7 @@ export interface AnalysisResponse {
   imageName?: string;
 }
 
-export type InputMethod = 'Camera' | 'Upload';
+export type InputMethod = 'Camera' | 'Upload' | 'LiveDetection';
 
 export type NavigationPage = 'Dashboard' | 'NewTest' | 'History' | 'Settings' | 'Help';
 

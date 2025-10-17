@@ -74,7 +74,7 @@ const UploadArea: React.FC<UploadAreaProps> = ({
     <div className="card">
       <div className="space-y-6">
         {/* Input method selector */}
-        <div className="flex items-center justify-center space-x-4">
+        <div className="flex items-center justify-center space-x-3">
           <button
             onClick={() => onInputMethodChange('Upload')}
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
@@ -97,7 +97,20 @@ const UploadArea: React.FC<UploadAreaProps> = ({
             }`}>
             <div className="flex items-center space-x-2">
               <Camera className="w-4 h-4" />
-              <span>Use Camera</span>
+              <span>Capture Photo</span>
+            </div>
+          </button>
+          
+          <button
+            onClick={() => onInputMethodChange('LiveDetection')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              inputMethod === 'LiveDetection' 
+                ? "bg-blue-100 text-blue-700" 
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}>
+            <div className="flex items-center space-x-2">
+              <Camera className="w-4 h-4" />
+              <span>Live Detection</span>
             </div>
           </button>
         </div>
@@ -144,8 +157,8 @@ const UploadArea: React.FC<UploadAreaProps> = ({
               className="hidden"
             />
           </div>
-        ) : (
-          // Camera section
+        ) : inputMethod === 'Camera' ? (
+          // Camera capture section
           <div className="text-center space-y-4">
             <div className="bg-gray-100 rounded-lg p-8 border-2 border-dashed border-gray-300">
               <Camera className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -164,6 +177,33 @@ const UploadArea: React.FC<UploadAreaProps> = ({
                 }}>
                 Open Camera
               </button>
+            </div>
+          </div>
+        ) : (
+          // Live Detection section
+          <div className="text-center space-y-4">
+            <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-lg p-8 border-2 border-dashed border-green-300">
+              <Camera className="w-16 h-16 text-green-500 mx-auto mb-4 animate-pulse" />
+              <p className="text-lg font-medium text-gray-700 mb-2">
+                Live Object Detection
+              </p>
+              <p className="text-sm text-gray-500 mb-4">
+                Real-time object counting with bounding boxes
+              </p>
+              <button 
+                className="btn-primary bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
+                onClick={onOpenCamera}>
+                Start Live Detection
+              </button>
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
+              <p className="text-sm font-medium text-blue-900 mb-2">✨ Live Detection Features:</p>
+              <ul className="text-xs text-blue-700 space-y-1">
+                <li>• Real-time object counting</li>
+                <li>• Bounding boxes around detected objects</li>
+                <li>• Live FPS display</li>
+                <li>• Pause/Resume functionality</li>
+              </ul>
             </div>
           </div>
         )}
