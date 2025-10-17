@@ -12,8 +12,7 @@ interface EditProfileModalProps {
 const EditProfileModal: React.FC<EditProfileModalProps> = ({ user, onSave, onClose }) => {
   const [formData, setFormData] = useState({
     name: user.name,
-    email: user.email,
-    role: user.role
+    email: user.email
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -232,26 +231,6 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ user, onSave, onClo
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Role
-              </label>
-              <select
-                value={formData.role}
-                onChange={(e) => handleInputChange('role', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                disabled={user.role !== 'admin'} // Only admins can change roles
-              >
-                <option value="viewer">Viewer</option>
-                <option value="user">User</option>
-                <option value="admin">Admin</option>
-              </select>
-              {user.role !== 'admin' && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Contact an administrator to change your role
-                </p>
-              )}
-            </div>
 
             {error && (
               <div className="text-red-600 text-sm">{error}</div>

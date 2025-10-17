@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
@@ -36,11 +35,32 @@ function App() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<HistoryItem | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('darkMode');
+    return saved !== null ? JSON.parse(saved) : false;
+  });
+
+  // Apply dark mode class to document
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
 
   // Toast helper function
   const showToast = (type: 'success' | 'error' | 'info', message: string, duration?: number) => {
     const id = Date.now().toString();
     setToasts(prev => [...prev, { id, type, message, duration }]);
+  };
+
+  // Handle dark mode toggle
+  const handleDarkModeToggle = () => {
+    const newValue = !darkMode;
+    setDarkMode(newValue);
+    localStorage.setItem('darkMode', JSON.stringify(newValue));
+    showToast('success', `${newValue ? 'Dark' : 'Light'} mode enabled`);
   };
 
   const removeToast = (id: string) => {
@@ -245,28 +265,6 @@ function App() {
     setShowDetailsModal(true);
   };
 
-  const handleReanalyze = (item: HistoryItem) => {
-    // Clear current state
-    setSelectedFile(null);
-    setCapturedImage(null);
-    setAnalysisResults(null);
-    
-    // Try to determine which services were used based on results
-    const usedServices: ServiceType[] = [];
-    if (item.results.ocr) usedServices.push('OCR');
-    if (item.results.productCount) usedServices.push('ProductCount');
-    if (item.results.freshness) usedServices.push('Freshness');
-    if (item.results.brand) usedServices.push('BrandRecognition');
-    
-    setSelectedServices(usedServices);
-    
-    // Navigate to NewTest page
-    setCurrentPage('NewTest');
-    
-    // Show message to user
-    showToast('info', `Ready to re-analyze! Please upload the image again and click "Analyze Image".\n\nServices pre-selected: ${usedServices.join(', ')}`, 5000);
-  };
-
   const handleResultAction = (service: ServiceType, action: string) => {
     switch (action) {
       case 'copy':
@@ -287,8 +285,6 @@ function App() {
         link.click();
         URL.revokeObjectURL(url);
         break;
-      default:
-        console.log(`${action} action for ${service}`);
     }
   };
 
@@ -485,7 +481,7 @@ function App() {
                 </div>
                 
                 {selectedServices.length > 0 && (
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-gray-600 dark:text-slate-400">
                     <span>Est. time: ~</span>
                     <span className="font-medium">
                       {selectedServices.length * 3}s
@@ -499,7 +495,7 @@ function App() {
             {analysisResults && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold text-gray-900">Analysis Results</h2>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100">Analysis Results</h2>
                   <div className="flex items-center space-x-2">
                     <button className="btn-secondary text-sm">
                       Download Report
@@ -537,16 +533,16 @@ function App() {
         return (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-semibold text-gray-900">Analysis History</h2>
-              <div className="text-sm text-gray-500">
+              <h2 className="text-2xl font-semibold text-gray-900 dark:text-slate-100">Analysis History</h2>
+              <div className="text-sm text-gray-500 dark:text-slate-400">
                 {history.length} {history.length === 1 ? 'analysis' : 'analyses'}
               </div>
             </div>
             
             {history.length === 0 ? (
               <div className="card">
-                <p className="text-gray-500 text-center py-8">No analysis history available yet.</p>
-                <p className="text-gray-400 text-center text-sm">
+                <p className="text-gray-500 dark:text-slate-400 text-center py-8">No analysis history available yet.</p>
+                <p className="text-gray-400 dark:text-slate-500 text-center text-sm">
                   Complete an analysis and save it to see it here.
                 </p>
               </div>
@@ -556,8 +552,8 @@ function App() {
                   <div key={item.jobId} className="card">
                     <div className="flex items-center justify-between mb-4">
                       <div>
-                        <h3 className="font-medium text-gray-900">{item.imageName}</h3>
-                        <p className="text-sm text-gray-500">
+                        <h3 className="font-medium text-gray-900 dark:text-slate-100">{item.imageName}</h3>
+                        <p className="text-sm text-gray-500 dark:text-slate-400">
                           {new Date(item.metadata.processedAt).toLocaleString()}
                         </p>
                       </div>
@@ -566,33 +562,33 @@ function App() {
                     
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       {item.results.ocr && (
-                        <div className="text-center p-3 bg-blue-50 rounded-lg">
-                          <div className="font-medium text-blue-900">OCR</div>
-                          <div className="text-blue-600">Text Extracted</div>
+                        <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                          <div className="font-medium text-blue-900 dark:text-blue-200">OCR</div>
+                          <div className="text-blue-600 dark:text-blue-400">Text Extracted</div>
                         </div>
                       )}
                       {item.results.productCount && (
-                        <div className="text-center p-3 bg-green-50 rounded-lg">
-                          <div className="font-medium text-green-900">Count</div>
-                          <div className="text-green-600">{item.results.productCount.total} Objects Detected</div>
+                        <div className="text-center p-3 bg-green-50 dark:bg-green-900/30 rounded-lg">
+                          <div className="font-medium text-green-900 dark:text-green-200">Count</div>
+                          <div className="text-green-600 dark:text-green-400">{item.results.productCount.total} Objects Detected</div>
                         </div>
                       )}
                       {item.results.freshness && (
-                        <div className="text-center p-3 bg-orange-50 rounded-lg">
-                          <div className="font-medium text-orange-900">Freshness</div>
-                          <div className="text-orange-600">Score: {item.results.freshness.score}</div>
+                        <div className="text-center p-3 bg-orange-50 dark:bg-orange-900/30 rounded-lg">
+                          <div className="font-medium text-orange-900 dark:text-orange-200">Freshness</div>
+                          <div className="text-orange-600 dark:text-orange-400">Score: {item.results.freshness.score}</div>
                         </div>
                       )}
                       {item.results.brand && (
-                        <div className="text-center p-3 bg-purple-50 rounded-lg">
-                          <div className="font-medium text-purple-900">Brand</div>
-                          <div className="text-purple-600">Recognized</div>
+                        <div className="text-center p-3 bg-purple-50 dark:bg-purple-900/30 rounded-lg">
+                          <div className="font-medium text-purple-900 dark:text-purple-200">Brand</div>
+                          <div className="text-purple-600 dark:text-purple-400">Recognized</div>
                         </div>
                       )}
                     </div>
                     
-                    <div className="flex items-center justify-between mt-4 pt-4 border-t">
-                      <div className="text-xs text-gray-500">
+                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 dark:border-slate-700">
+                      <div className="text-xs text-gray-500 dark:text-slate-500">
                         Job ID: {item.jobId}
                       </div>
                       <div className="flex space-x-2">
@@ -618,11 +614,11 @@ function App() {
       case 'Settings':
         return (
           <div className="space-y-6">
-            <h2 className="text-2xl font-semibold text-gray-900">Settings</h2>
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-slate-100">Settings</h2>
             
             {/* User Profile */}
             <div className="card">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">User Profile</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100 mb-4">User Profile</h3>
               <div className="space-y-4">
                 <div className="flex items-center space-x-4">
                   <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
@@ -631,15 +627,8 @@ function App() {
                     </span>
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-medium text-gray-900">{currentUser.name}</h4>
-                    <p className="text-sm text-gray-500">{currentUser.email}</p>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      currentUser.role === 'admin' ? 'bg-purple-100 text-purple-800' :
-                      currentUser.role === 'user' ? 'bg-blue-100 text-blue-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {currentUser.role}
-                    </span>
+                    <h4 className="font-medium text-gray-900 dark:text-slate-100">{currentUser.name}</h4>
+                    <p className="text-sm text-gray-500 dark:text-slate-400">{currentUser.email}</p>
                   </div>
                   <button 
                     className="btn-secondary text-sm"
@@ -650,18 +639,18 @@ function App() {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                       Member Since
                     </label>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-600 dark:text-slate-400">
                       {new Date(currentUser.createdAt).toLocaleDateString()}
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                       Last Login
                     </label>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-600 dark:text-slate-400">
                       {currentUser.lastLogin ? new Date(currentUser.lastLogin).toLocaleString() : 'Never'}
                     </p>
                   </div>
@@ -671,23 +660,28 @@ function App() {
             
             {/* Application Settings */}
             <div className="card">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Application Settings</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100 mb-4">Application Settings</h3>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="font-medium text-gray-900">Auto-save Results</h4>
-                    <p className="text-sm text-gray-500">Automatically save analysis results to history</p>
+                    <h4 className="font-medium text-gray-900 dark:text-slate-100">Dark Mode</h4>
+                    <p className="text-sm text-gray-500 dark:text-slate-400">Toggle between light and dark theme</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" defaultChecked />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    <input 
+                      type="checkbox" 
+                      className="sr-only peer" 
+                      checked={darkMode}
+                      onChange={handleDarkModeToggle}
+                    />
+                    <div className="w-11 h-6 bg-gray-200 dark:bg-slate-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                   </label>
                 </div>
                 
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="font-medium text-gray-900">Default Services</h4>
-                    <p className="text-sm text-gray-500">Services to select by default for new analyses</p>
+                    <h4 className="font-medium text-gray-900 dark:text-slate-100">Default Services</h4>
+                    <p className="text-sm text-gray-500 dark:text-slate-400">Services to select by default for new analyses</p>
                   </div>
                   <button className="btn-secondary text-sm">
                     Configure
@@ -696,10 +690,10 @@ function App() {
                 
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="font-medium text-gray-900">API Endpoint</h4>
-                    <p className="text-sm text-gray-500">Backend server URL for analysis requests</p>
+                    <h4 className="font-medium text-gray-900 dark:text-slate-100">API Endpoint</h4>
+                    <p className="text-sm text-gray-500 dark:text-slate-400">Backend server URL for analysis requests</p>
                   </div>
-                  <span className="text-sm text-gray-600 font-mono">
+                  <span className="text-sm text-gray-600 dark:text-slate-400 font-mono">
                     http://localhost:5000
                   </span>
                 </div>
@@ -708,29 +702,29 @@ function App() {
             
             {/* Analytics */}
             <div className="card">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Your Analytics</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100 mb-4">Your Analytics</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-900">{history.length}</div>
-                  <div className="text-sm text-gray-500">Total Analyses</div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-slate-100">{history.length}</div>
+                  <div className="text-sm text-gray-500 dark:text-slate-400">Total Analyses</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-900">
+                  <div className="text-2xl font-bold text-gray-900 dark:text-slate-100">
                     {history.filter(h => h.status === 'Success').length}
                   </div>
-                  <div className="text-sm text-gray-500">Successful</div>
+                  <div className="text-sm text-gray-500 dark:text-slate-400">Successful</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-900">
+                  <div className="text-2xl font-bold text-gray-900 dark:text-slate-100">
                     {history.length > 0 ? Math.round((history.filter(h => h.status === 'Success').length / history.length) * 100) : 0}%
                   </div>
-                  <div className="text-sm text-gray-500">Success Rate</div>
+                  <div className="text-sm text-gray-500 dark:text-slate-400">Success Rate</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-900">
+                  <div className="text-2xl font-bold text-gray-900 dark:text-slate-100">
                     {history.filter(h => h.results.ocr).length}
                   </div>
-                  <div className="text-sm text-gray-500">OCR Uses</div>
+                  <div className="text-sm text-gray-500 dark:text-slate-400">OCR Uses</div>
                 </div>
               </div>
             </div>
@@ -748,20 +742,20 @@ function App() {
                 </svg>
               </div>
               <div>
-                <h1 className="text-2xl font-semibold text-gray-900">Smart Quality Test System</h1>
-                <p className="text-gray-600">Help & Documentation</p>
+                <h1 className="text-2xl font-semibold text-gray-900 dark:text-slate-100">Smart Quality Test System</h1>
+                <p className="text-gray-600 dark:text-slate-400">Help & Documentation</p>
               </div>
             </div>
 
             {/* Product Overview */}
             <div className="card">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">About the Product</h2>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100 mb-4">About the Product</h2>
               <div className="prose max-w-none">
-                <p className="text-gray-700 mb-4">
+                <p className="text-gray-700 dark:text-slate-300 mb-4">
                   The Smart Quality Test System is an AI-powered platform designed to analyze product quality through advanced computer vision and machine learning techniques. 
                   It provides comprehensive analysis capabilities including text recognition, product counting, freshness assessment, and brand verification.
                 </p>
-                <p className="text-gray-700">
+                <p className="text-gray-700 dark:text-slate-300">
                   This system is built for businesses and quality control professionals who need fast, accurate, and automated product analysis to ensure quality standards and improve operational efficiency.
                 </p>
               </div>
@@ -769,15 +763,15 @@ function App() {
 
             {/* Getting Started */}
             <div className="card">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Getting Started</h2>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100 mb-4">Getting Started</h2>
               <div className="space-y-4">
                 <div className="flex items-start space-x-3">
                   <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                     <span className="text-sm font-medium text-blue-600">1</span>
                   </div>
                   <div>
-                    <h3 className="font-medium text-gray-900">Create an Account</h3>
-                    <p className="text-sm text-gray-600">Sign up with your email and password to access the platform.</p>
+                    <h3 className="font-medium text-gray-900 dark:text-slate-100">Create an Account</h3>
+                    <p className="text-sm text-gray-600 dark:text-slate-400">Sign up with your email and password to access the platform.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
@@ -785,8 +779,8 @@ function App() {
                     <span className="text-sm font-medium text-blue-600">2</span>
                   </div>
                   <div>
-                    <h3 className="font-medium text-gray-900">Upload or Capture Images</h3>
-                    <p className="text-sm text-gray-600">Use the camera feature or upload product images for analysis.</p>
+                    <h3 className="font-medium text-gray-900 dark:text-slate-100">Upload or Capture Images</h3>
+                    <p className="text-sm text-gray-600 dark:text-slate-400">Use the camera feature or upload product images for analysis.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
@@ -794,8 +788,8 @@ function App() {
                     <span className="text-sm font-medium text-blue-600">3</span>
                   </div>
                   <div>
-                    <h3 className="font-medium text-gray-900">Select Analysis Services</h3>
-                    <p className="text-sm text-gray-600">Choose which analysis services you want to run on your image.</p>
+                    <h3 className="font-medium text-gray-900 dark:text-slate-100">Select Analysis Services</h3>
+                    <p className="text-sm text-gray-600 dark:text-slate-400">Choose which analysis services you want to run on your image.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
@@ -803,8 +797,8 @@ function App() {
                     <span className="text-sm font-medium text-blue-600">4</span>
                   </div>
                   <div>
-                    <h3 className="font-medium text-gray-900">Review Results</h3>
-                    <p className="text-sm text-gray-600">Analyze the results and save them to your history for future reference.</p>
+                    <h3 className="font-medium text-gray-900 dark:text-slate-100">Review Results</h3>
+                    <p className="text-sm text-gray-600 dark:text-slate-400">Analyze the results and save them to your history for future reference.</p>
                   </div>
                 </div>
               </div>
@@ -812,65 +806,65 @@ function App() {
 
             {/* Available Services */}
             <div className="card">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Available Services</h2>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100 mb-4">Available Services</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="p-4 border border-gray-200 rounded-lg">
+                <div className="p-4 border border-gray-200 dark:border-slate-700 rounded-lg">
                   <div className="flex items-center space-x-2 mb-2">
                     <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
                       <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
                       </svg>
                     </div>
-                    <h3 className="font-medium text-gray-900">OCR (Text Recognition)</h3>
+                    <h3 className="font-medium text-gray-900 dark:text-slate-100">OCR (Text Recognition)</h3>
                   </div>
-                  <p className="text-sm text-gray-600">Extracts text from product labels, packaging, and documents. Useful for reading product names, expiry dates, ingredients, and other textual information.</p>
+                  <p className="text-sm text-gray-600 dark:text-slate-400">Extracts text from product labels, packaging, and documents. Useful for reading product names, expiry dates, ingredients, and other textual information.</p>
                 </div>
 
-                <div className="p-4 border border-gray-200 rounded-lg">
+                <div className="p-4 border border-gray-200 dark:border-slate-700 rounded-lg">
                   <div className="flex items-center space-x-2 mb-2">
                     <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
                       <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
                       </svg>
                     </div>
-                    <h3 className="font-medium text-gray-900">Product Count</h3>
+                    <h3 className="font-medium text-gray-900 dark:text-slate-100">Product Count</h3>
                   </div>
-                  <p className="text-sm text-gray-600">Automatically counts the number of products in an image. Perfect for inventory management and quality control processes.</p>
+                  <p className="text-sm text-gray-600 dark:text-slate-400">Automatically counts the number of products in an image. Perfect for inventory management and quality control processes.</p>
                 </div>
 
-                <div className="p-4 border border-gray-200 rounded-lg">
+                <div className="p-4 border border-gray-200 dark:border-slate-700 rounded-lg">
                   <div className="flex items-center space-x-2 mb-2">
                     <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
                       <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707" />
                       </svg>
                     </div>
-                    <h3 className="font-medium text-gray-900">Freshness Detection</h3>
+                    <h3 className="font-medium text-gray-900 dark:text-slate-100">Freshness Detection</h3>
                   </div>
-                  <p className="text-sm text-gray-600">Analyzes product freshness and quality condition. Provides freshness scores and identifies potential quality issues in perishable goods.</p>
+                  <p className="text-sm text-gray-600 dark:text-slate-400">Analyzes product freshness and quality condition. Provides freshness scores and identifies potential quality issues in perishable goods.</p>
                 </div>
 
-                <div className="p-4 border border-gray-200 rounded-lg">
+                <div className="p-4 border border-gray-200 dark:border-slate-700 rounded-lg">
                   <div className="flex items-center space-x-2 mb-2">
                     <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
                       <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </div>
-                    <h3 className="font-medium text-gray-900">Brand Recognition</h3>
+                    <h3 className="font-medium text-gray-900 dark:text-slate-100">Brand Recognition</h3>
                   </div>
-                  <p className="text-sm text-gray-600">Identifies and verifies product brands and logos. Helps detect counterfeit products and ensures brand authenticity.</p>
+                  <p className="text-sm text-gray-600 dark:text-slate-400">Identifies and verifies product brands and logos. Helps detect counterfeit products and ensures brand authenticity.</p>
                 </div>
               </div>
             </div>
 
             {/* How to Use */}
             <div className="card">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">How to Use Each Feature</h2>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100 mb-4">How to Use Each Feature</h2>
               <div className="space-y-6">
                 <div>
-                  <h3 className="font-medium text-gray-900 mb-2">📸 Image Input</h3>
-                  <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
+                  <h3 className="font-medium text-gray-900 dark:text-slate-100 mb-2">📸 Image Input</h3>
+                  <ul className="text-sm text-gray-600 dark:text-slate-400 space-y-1 list-disc list-inside">
                     <li><strong>Camera:</strong> Click "Open Camera" to take a live photo. Ensure good lighting and hold the camera steady.</li>
                     <li><strong>Upload:</strong> Drag and drop files or click to browse. Supports JPG, PNG, and other common image formats.</li>
                     <li><strong>Tips:</strong> Use high-resolution images for better accuracy. Ensure products are clearly visible and well-lit.</li>
@@ -878,8 +872,8 @@ function App() {
                 </div>
 
                 <div>
-                  <h3 className="font-medium text-gray-900 mb-2">⚙️ Service Selection</h3>
-                  <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
+                  <h3 className="font-medium text-gray-900 dark:text-slate-100 mb-2">⚙️ Service Selection</h3>
+                  <ul className="text-sm text-gray-600 dark:text-slate-400 space-y-1 list-disc list-inside">
                     <li>Select one or multiple services based on your analysis needs</li>
                     <li>Each service runs independently and provides specific insights</li>
                     <li>Processing time increases with the number of selected services</li>
@@ -887,8 +881,8 @@ function App() {
                 </div>
 
                 <div>
-                  <h3 className="font-medium text-gray-900 mb-2">📊 Results & Actions</h3>
-                  <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
+                  <h3 className="font-medium text-gray-900 dark:text-slate-100 mb-2">📊 Results & Actions</h3>
+                  <ul className="text-sm text-gray-600 dark:text-slate-400 space-y-1 list-disc list-inside">
                     <li><strong>Copy:</strong> Copy OCR text results to clipboard</li>
                     <li><strong>Save:</strong> Save analysis results to your personal history</li>
                     <li><strong>Export:</strong> Download results as JSON for external use</li>
@@ -899,11 +893,11 @@ function App() {
 
             {/* Best Practices */}
             <div className="card">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Best Practices</h2>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100 mb-4">Best Practices</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h3 className="font-medium text-gray-900 mb-2 text-green-600">✅ Do</h3>
-                  <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
+                  <h3 className="font-medium text-gray-900 dark:text-slate-100 mb-2 text-green-600">✅ Do</h3>
+                  <ul className="text-sm text-gray-600 dark:text-slate-400 space-y-1 list-disc list-inside">
                     <li>Use well-lit, clear images</li>
                     <li>Ensure products fill most of the frame</li>
                     <li>Use stable camera positioning</li>
@@ -912,8 +906,8 @@ function App() {
                   </ul>
                 </div>
                 <div>
-                  <h3 className="font-medium text-gray-900 mb-2 text-red-600">❌ Avoid</h3>
-                  <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
+                  <h3 className="font-medium text-gray-900 dark:text-slate-100 mb-2 text-red-600">❌ Avoid</h3>
+                  <ul className="text-sm text-gray-600 dark:text-slate-400 space-y-1 list-disc list-inside">
                     <li>Blurry or low-resolution images</li>
                     <li>Poor lighting or shadows</li>
                     <li>Cluttered backgrounds</li>
@@ -926,11 +920,11 @@ function App() {
 
             {/* Support */}
             <div className="card">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Support & Contact</h2>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100 mb-4">Support & Contact</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h3 className="font-medium text-gray-900 mb-2">System Information</h3>
-                  <div className="text-sm text-gray-600 space-y-1">
+                  <h3 className="font-medium text-gray-900 dark:text-slate-100 mb-2">System Information</h3>
+                  <div className="text-sm text-gray-600 dark:text-slate-400 space-y-1">
                     <p><strong>Version:</strong> v1.0.0</p>
                     <p><strong>Backend:</strong> Flask + Python</p>
                     <p><strong>Frontend:</strong> React + TypeScript</p>
@@ -938,8 +932,8 @@ function App() {
                   </div>
                 </div>
                 <div>
-                  <h3 className="font-medium text-gray-900 mb-2">Troubleshooting</h3>
-                  <div className="text-sm text-gray-600 space-y-1">
+                  <h3 className="font-medium text-gray-900 dark:text-slate-100 mb-2">Troubleshooting</h3>
+                  <div className="text-sm text-gray-600 dark:text-slate-400 space-y-1">
                     <p><strong>Login Issues:</strong> Clear browser cache and try again</p>
                     <p><strong>Upload Problems:</strong> Check file size and format</p>
                     <p><strong>Slow Processing:</strong> Reduce image size or try fewer services</p>
@@ -957,7 +951,7 @@ function App() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-screen bg-gray-50 dark:bg-slate-900 overflow-hidden">
       {/* Sidebar */}
       <Sidebar
         currentPage={currentPage}
@@ -976,7 +970,7 @@ function App() {
         />
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-6 dark:bg-slate-900">
           {renderPageContent()}
         </main>
       </div>

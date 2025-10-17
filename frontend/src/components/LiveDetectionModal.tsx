@@ -58,8 +58,6 @@ const LiveDetectionModal: React.FC<LiveDetectionModalProps> = ({ onClose }) => {
         // Convert to base64
         const frameData = canvas.toDataURL('image/jpeg', 0.8);
 
-        console.log('Sending frame for detection...');
-        
         // Send for detection with boxes
         const response = await fetch('http://localhost:5001/api/detect/live-count', {
           method: 'POST',
@@ -72,7 +70,6 @@ const LiveDetectionModal: React.FC<LiveDetectionModalProps> = ({ onClose }) => {
 
         if (response.ok) {
           const data = await response.json();
-          console.log('Detection result:', data.count, 'objects');
           setObjectCount(data.count || 0);
 
           // Display annotated frame with boxes
@@ -125,7 +122,6 @@ const LiveDetectionModal: React.FC<LiveDetectionModalProps> = ({ onClose }) => {
         });
       } catch (err) {
         // If environment camera fails, try user camera (front camera)
-        console.log('Environment camera failed, trying user camera...');
         mediaStream = await navigator.mediaDevices.getUserMedia({
           video: {
             width: { ideal: 1280 },
@@ -147,30 +143,25 @@ const LiveDetectionModal: React.FC<LiveDetectionModalProps> = ({ onClose }) => {
               setIsLoading(false);
               setIsDetecting(true); // Auto-start detection
             })
-            .catch(playErr => {
-              console.error('Play error:', playErr);
+            .catch(_ => {
               setError('Failed to start video playback.');
               setIsLoading(false);
             });
         };
       }
     } catch (err: any) {
-      console.error('Camera error:', err);
       setError(`Camera access denied: ${err.message || 'Please allow camera permissions in your browser.'}`);
       setIsLoading(false);
     }
   };
 
   const stopCamera = () => {
-    console.log('Stopping camera...');
-    
     // Stop detection first
     setIsDetecting(false);
     
     // Stop all tracks in the stream
     if (stream) {
       stream.getTracks().forEach(track => {
-        console.log('Stopping track:', track.kind);
         track.stop();
       });
       setStream(null);
@@ -180,8 +171,6 @@ const LiveDetectionModal: React.FC<LiveDetectionModalProps> = ({ onClose }) => {
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
-    
-    console.log('Camera stopped');
   };
 
   const toggleDetection = () => {
@@ -195,9 +184,9 @@ const LiveDetectionModal: React.FC<LiveDetectionModalProps> = ({ onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-white dark:bg-slate-800 rounded-lg max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+        <div className="flex items-center justify-between p-4 border-b dark:border-slate-700 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
           <div className="flex items-center space-x-3">
             <Camera className="w-6 h-6" />
             <div>
@@ -284,9 +273,9 @@ const LiveDetectionModal: React.FC<LiveDetectionModalProps> = ({ onClose }) => {
         </div>
 
         {/* Controls */}
-        <div className="p-4 bg-gray-50 border-t">
+        <div className="p-4 bg-gray-50 dark:bg-slate-700 border-t dark:border-slate-600">
           <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-gray-600 dark:text-slate-300">
               <p className="font-medium">✓ Green boxes show detected objects</p>
               <p className="text-xs mt-1">✓ Numbers indicate object IDs</p>
             </div>
@@ -313,7 +302,7 @@ const LiveDetectionModal: React.FC<LiveDetectionModalProps> = ({ onClose }) => {
               </button>
               <button
                 onClick={handleClose}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors">
+                className="px-4 py-2 bg-gray-200 dark:bg-slate-600 hover:bg-gray-300 dark:hover:bg-slate-500 text-gray-700 dark:text-slate-100 rounded-lg font-medium transition-colors">
                 Close
               </button>
             </div>

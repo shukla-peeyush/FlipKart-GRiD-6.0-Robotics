@@ -90,10 +90,9 @@ export interface NavItem {
 
 export interface User {
   id: string;
-  name: string;
   email: string;
-  role: 'admin' | 'user' | 'viewer';
-  avatar?: string;
+  name: string;
+  avatar?: string | null;
   createdAt: string;
   lastLogin?: string;
 }

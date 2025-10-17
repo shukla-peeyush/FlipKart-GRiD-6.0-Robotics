@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Activity, 
-  TrendingUp, 
   Zap, 
   Clock,
   Eye,
@@ -11,7 +10,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Cpu,
-  Server,
   Camera,
   Sparkles,
   BarChart3,
@@ -278,7 +276,6 @@ const Dashboard: React.FC<DashboardProps> = ({ userName, history, onNavigate, sh
     
     const startCamera = async () => {
       try {
-        console.log('Requesting camera access...');
         stream = await navigator.mediaDevices.getUserMedia({
           video: {
             width: { ideal: 640 },
@@ -287,36 +284,26 @@ const Dashboard: React.FC<DashboardProps> = ({ userName, history, onNavigate, sh
           }
         });
         
-        console.log('Camera stream obtained:', stream);
-        
         if (videoRef.current) {
           const video = videoRef.current;
           video.srcObject = stream;
           
-          console.log('Setting up video element...');
-          
           // Try to play immediately
           video.play()
             .then(() => {
-              console.log('Video playing successfully!');
               setCameraActive(true);
               setIsCountingActive(true); // Start counting when camera is active
               setCameraError(null);
             })
-            .catch(err => {
-              console.log('Direct play failed, waiting for loadedmetadata:', err);
-              
+            .catch(() => {
               // If direct play fails, wait for metadata
               video.onloadedmetadata = () => {
-                console.log('Video metadata loaded, attempting play...');
                 video.play()
                   .then(() => {
-                    console.log('Video playing after metadata!');
                     setCameraActive(true);
                     setCameraError(null);
                   })
-                  .catch(playErr => {
-                    console.error('Video play error:', playErr);
+                  .catch(() => {
                     setCameraError('Failed to play video');
                     setCameraActive(false);
                     setIsCountingActive(false);
@@ -325,7 +312,6 @@ const Dashboard: React.FC<DashboardProps> = ({ userName, history, onNavigate, sh
             });
         }
       } catch (error) {
-        console.error('Camera access error:', error);
         setCameraError('Camera access denied');
         setCameraActive(false);
         setIsCountingActive(false);
@@ -338,7 +324,6 @@ const Dashboard: React.FC<DashboardProps> = ({ userName, history, onNavigate, sh
     return () => {
       clearTimeout(timer);
       if (stream) {
-        console.log('Stopping camera stream');
         stream.getTracks().forEach(track => track.stop());
       }
     };
@@ -360,13 +345,6 @@ const Dashboard: React.FC<DashboardProps> = ({ userName, history, onNavigate, sh
     visible: { opacity: 1, y: 0 }
   };
   
-  const cardVariants = {
-    hover: {
-      scale: 1.03,
-      boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-      transition: { duration: 0.2 }
-    }
-  };
 
   return (
     <motion.div
@@ -408,14 +386,14 @@ const Dashboard: React.FC<DashboardProps> = ({ userName, history, onNavigate, sh
       {/* 1. Mission Control Header */}
       <motion.div variants={itemVariants} className="mb-8">
         <motion.h1 
-          className="text-3xl font-bold text-gray-900 mb-2"
+          className="text-3xl font-bold text-gray-900 dark:text-slate-100 mb-2"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
         >
           {greeting}, {userName} 👋
         </motion.h1>
         <motion.p 
-          className="text-gray-600"
+          className="text-gray-600 dark:text-slate-300"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
@@ -448,8 +426,8 @@ const Dashboard: React.FC<DashboardProps> = ({ userName, history, onNavigate, sh
                 +12% ↑
               </motion.div>
             </div>
-            <p className="text-sm text-gray-600 mb-1">Total Analyses</p>
-            <p className="text-3xl font-bold text-gray-900">{totalAnalysesAnimated.toLocaleString()}</p>
+            <p className="text-sm text-gray-600 dark:text-slate-400 mb-1">Total Analyses</p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-slate-100">{totalAnalysesAnimated.toLocaleString()}</p>
             <div className="mt-3 h-1 bg-gray-100 rounded-full overflow-hidden">
               <motion.div
                 className="h-full bg-gradient-to-r from-blue-500 to-cyan-500"
@@ -497,8 +475,8 @@ const Dashboard: React.FC<DashboardProps> = ({ userName, history, onNavigate, sh
                 </div>
               </div>
             </div>
-            <p className="text-sm text-gray-600 mb-1">Success Rate</p>
-            <p className="text-3xl font-bold text-gray-900">{successRateAnimated}.2%</p>
+            <p className="text-sm text-gray-600 dark:text-slate-400 mb-1">Success Rate</p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-slate-100">{successRateAnimated}.2%</p>
           </div>
         </motion.div>
 
@@ -523,8 +501,8 @@ const Dashboard: React.FC<DashboardProps> = ({ userName, history, onNavigate, sh
                 <RefreshCw className="w-4 h-4 text-orange-500" />
               </motion.div>
             </div>
-            <p className="text-sm text-gray-600 mb-1">Avg Processing</p>
-            <p className="text-3xl font-bold text-gray-900">{avgProcessing}s</p>
+            <p className="text-sm text-gray-600 dark:text-slate-400 mb-1">Avg Processing</p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-slate-100">{avgProcessing}s</p>
             <p className="text-xs text-green-600 mt-2">-5s from last week</p>
           </div>
         </motion.div>
@@ -551,8 +529,8 @@ const Dashboard: React.FC<DashboardProps> = ({ userName, history, onNavigate, sh
                 <Hash className="w-4 h-4 text-purple-600" />
               </motion.div>
             </div>
-            <p className="text-sm text-gray-600 mb-1">Most Used Service</p>
-            <p className="text-2xl font-bold text-gray-900">
+            <p className="text-sm text-gray-600 dark:text-slate-400 mb-1">Most Used Service</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-slate-100">
               {serviceUsage.reduce((max, s) => s.value > max.value ? s : max, serviceUsage[0]).name}
             </p>
             <p className="text-xs text-gray-500 mt-2">
@@ -566,7 +544,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userName, history, onNavigate, sh
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Service Usage Chart */}
         <motion.div variants={itemVariants} className="card">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-4 flex items-center">
             <PieChart className="w-5 h-5 mr-2 text-blue-600" />
             Service Usage Analytics
           </h3>
@@ -580,8 +558,8 @@ const Dashboard: React.FC<DashboardProps> = ({ userName, history, onNavigate, sh
                 className="group"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-700">{service.name}</span>
-                  <span className="text-sm text-gray-600">{service.value} uses</span>
+                  <span className="text-sm font-medium text-gray-700 dark:text-slate-200">{service.name}</span>
+                  <span className="text-sm text-gray-600 dark:text-slate-400">{service.value} uses</span>
                 </div>
                 <div className="relative h-3 bg-gray-100 rounded-full overflow-hidden">
                   <motion.div
@@ -605,7 +583,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userName, history, onNavigate, sh
 
         {/* AI Model Health */}
         <motion.div variants={itemVariants} className="card">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-4 flex items-center">
             <Cpu className="w-5 h-5 mr-2 text-purple-600" />
             AI Model Health
           </h3>
@@ -616,7 +594,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userName, history, onNavigate, sh
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.1 * index }}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors"
               >
                 <div className="flex items-center space-x-3">
                   <motion.div
@@ -628,8 +606,8 @@ const Dashboard: React.FC<DashboardProps> = ({ userName, history, onNavigate, sh
                     transition={{ duration: 2, repeat: Infinity }}
                   />
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{model.name}</p>
-                    <p className="text-xs text-gray-500">Uptime: {model.uptime}</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-slate-100">{model.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-slate-400">Uptime: {model.uptime}</p>
                   </div>
                 </div>
                 <motion.div
@@ -652,7 +630,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userName, history, onNavigate, sh
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Activity Feed */}
         <motion.div variants={itemVariants} className="lg:col-span-2 card">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-4 flex items-center">
             <Activity className="w-5 h-5 mr-2 text-green-600" />
             Recent Activity
           </h3>
@@ -663,7 +641,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userName, history, onNavigate, sh
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.05 * index }}
-                className="flex items-start space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-colors group"
+                className="flex items-start space-x-3 p-3 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg transition-colors group"
               >
                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
                   activity.type === 'OCR' ? 'bg-blue-100' :
@@ -676,9 +654,9 @@ const Dashboard: React.FC<DashboardProps> = ({ userName, history, onNavigate, sh
                    <Eye className="w-5 h-5 text-purple-600" />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900">{activity.product}</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-slate-100">{activity.product}</p>
                   <div className="flex items-center space-x-2 mt-1">
-                    <span className="text-xs text-gray-500">{activity.time}</span>
+                    <span className="text-xs text-gray-500 dark:text-slate-400">{activity.time}</span>
                     <span className={`text-xs px-2 py-0.5 rounded-full ${
                       activity.result === 'Success' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
                     }`}>
@@ -775,22 +753,22 @@ const Dashboard: React.FC<DashboardProps> = ({ userName, history, onNavigate, sh
 
       {/* 5. Insights & Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {insights.map((insight, index) => {
+        {insights.map((insight) => {
           const Icon = insight.icon;
           return (
             <motion.div
               key={insight.title}
               variants={itemVariants}
               whileHover={{ scale: 1.02, y: -4 }}
-              className="card bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-blue-100"
+              className="card bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-2 border-blue-100 dark:border-blue-800"
             >
               <div className="flex items-start space-x-3">
-                <div className="p-2 bg-white rounded-lg shadow-sm">
+                <div className="p-2 bg-white dark:bg-slate-700 rounded-lg shadow-sm">
                   <Icon className="w-5 h-5 text-blue-600" />
                 </div>
                 <div className="flex-1">
-                  <h4 className="font-semibold text-gray-900 mb-1">{insight.title}</h4>
-                  <p className="text-sm text-gray-600">{insight.description}</p>
+                  <h4 className="font-semibold text-gray-900 dark:text-slate-100 mb-1">{insight.title}</h4>
+                  <p className="text-sm text-gray-600 dark:text-slate-300">{insight.description}</p>
                 </div>
               </div>
             </motion.div>

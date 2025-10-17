@@ -78,8 +78,8 @@ const FeatureSelector: React.FC<FeatureSelectorProps> = ({
     <div className="card">
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">Select Analysis Services</h3>
-          <span className="text-sm text-gray-500">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Select Analysis Services</h3>
+          <span className="text-sm text-gray-500 dark:text-slate-400">
             {selectedServices.length} of {services.length} selected
           </span>
         </div>
@@ -93,7 +93,7 @@ const FeatureSelector: React.FC<FeatureSelectorProps> = ({
               <div
                 key={serviceInfo.service}
                 className={`relative p-4 rounded-xl border-2 transition-all cursor-pointer ${
-                  selected ? "border-blue-300 bg-blue-50" : "border-gray-200 hover:border-gray-300 bg-white"
+                  selected ? "border-blue-300 bg-blue-50 dark:border-blue-500 dark:bg-blue-900/20" : "border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800"
                 } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
                 onClick={() => !disabled && onToggle(serviceInfo.service)}>
                 
@@ -115,8 +115,8 @@ const FeatureSelector: React.FC<FeatureSelectorProps> = ({
                       {getServiceIcon(serviceInfo.service)}
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-medium text-gray-900">{serviceInfo.title}</h4>
-                      <p className="text-sm text-gray-600 mt-1">{serviceInfo.description}</p>
+                      <h4 className="font-medium text-gray-900 dark:text-slate-100">{serviceInfo.title}</h4>
+                      <p className="text-sm text-gray-600 dark:text-slate-400 mt-1">{serviceInfo.description}</p>
                     </div>
                   </div>
 
@@ -141,7 +141,7 @@ const FeatureSelector: React.FC<FeatureSelectorProps> = ({
         </div>
 
         {/* Quick actions */}
-        <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+          <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-slate-700">
           <div className="flex space-x-2">
             <button
               className="btn-secondary text-sm"
@@ -158,7 +158,7 @@ const FeatureSelector: React.FC<FeatureSelectorProps> = ({
           </div>
           
           {selectedServices.length > 0 && (
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-gray-600 dark:text-slate-400">
               <span>Estimated total time: </span>
               <span className="font-medium">
                 ~{selectedServices.length * 3}s

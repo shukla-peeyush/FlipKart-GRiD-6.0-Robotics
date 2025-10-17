@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Calendar, Plus, Clock, Settings, HelpCircle, ChevronLeft, ChevronRight, FlaskConical } from 'lucide-react';
+import { Calendar, Clock, Settings, HelpCircle, FlaskConical } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { NavigationPage, NavItem } from '../types';
+import type { NavigationPage } from '../types';
 
 interface SidebarProps {
   currentPage: NavigationPage;
@@ -10,7 +10,7 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, collapsed }) => {
-  const [isCollapsed, setIsCollapsed] = useState(collapsed);
+  const [isCollapsed] = useState(collapsed);
 
   const navItems = [
     {
@@ -44,7 +44,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, collapsed })
   ];
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 flex flex-col h-full">
+    <aside className="w-64 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-700 flex flex-col h-full">
       <div className="p-6 flex-1 flex flex-col">
         {/* Logo Section */}
         <motion.div 
@@ -65,7 +65,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, collapsed })
                 <h1 className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
                   QualityAI
                 </h1>
-                <p className="text-xs text-gray-600">Smart Testing System</p>
+                <p className="text-xs text-gray-600 dark:text-slate-400">Smart Testing System</p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -115,8 +115,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, collapsed })
                       exit={{ opacity: 0, x: -10 }}
                       className="flex-1 text-left relative z-10"
                     >
-                      <div className="font-medium text-gray-900">{item.label}</div>
-                      <div className="text-xs text-gray-600">{item.description}</div>
+                      <div className="font-medium text-gray-900 dark:text-slate-100">{item.label}</div>
+                      <div className="text-xs text-gray-600 dark:text-slate-400">{item.description}</div>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -138,11 +138,11 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, collapsed })
         <div className="flex-1"></div>
         
         {/* Help Section */}
-        <div className="mt-auto pt-6 border-t border-gray-200">
+        <div className="mt-auto pt-6 border-t border-gray-200 dark:border-slate-700">
           <motion.button 
             onClick={() => onNavigate('Help')}
-            className={`w-full flex items-center p-4 text-gray-700 hover:text-gray-900 hover:bg-white/50 rounded-xl transition-all ${
-              currentPage === 'Help' ? 'bg-white/50 text-gray-900' : ''
+            className={`w-full flex items-center p-4 text-gray-700 dark:text-slate-300 hover:text-gray-900 dark:hover:text-slate-100 hover:bg-white/50 dark:hover:bg-slate-800/50 rounded-xl transition-all ${
+              currentPage === 'Help' ? 'bg-white/50 dark:bg-slate-800/50 text-gray-900 dark:text-slate-100' : ''
             } ${isCollapsed ? "justify-center" : ""}`}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -159,7 +159,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, collapsed })
                   className="flex-1 text-left"
                 >
                   <div className="font-medium">Help & Docs</div>
-                  <div className="text-xs text-gray-600">Documentation</div>
+                  <div className="text-xs text-gray-600 dark:text-slate-400">Documentation</div>
                 </motion.div>
               )}
             </AnimatePresence>

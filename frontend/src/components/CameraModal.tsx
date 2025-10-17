@@ -85,16 +85,16 @@ const CameraModal: React.FC<CameraModalProps> = ({ onCapture, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-white dark:bg-slate-800 rounded-lg max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <h3 className="text-lg font-semibold flex items-center">
+        <div className="flex items-center justify-between p-4 border-b dark:border-slate-700">
+          <h3 className="text-lg font-semibold flex items-center text-gray-900 dark:text-slate-100">
             <Camera className="w-5 h-5 mr-2" />
             Camera Capture
           </h3>
           <button
             onClick={handleClose}
-            className="text-gray-400 hover:text-gray-600 p-1">
+            className="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 p-1">
             <X className="w-6 h-6" />
           </button>
         </div>
@@ -157,7 +157,7 @@ const CameraModal: React.FC<CameraModalProps> = ({ onCapture, onClose }) => {
         </div>
 
         {/* Controls */}
-        <div className="p-4 flex items-center justify-center space-x-4">
+        <div className="p-4 flex items-center justify-center space-x-4 bg-white dark:bg-slate-800 border-t dark:border-slate-700">
           <button
             onClick={handleClose}
             className="btn-secondary">
@@ -174,7 +174,7 @@ const CameraModal: React.FC<CameraModalProps> = ({ onCapture, onClose }) => {
         </div>
 
         {/* Tips */}
-        <div className="px-4 pb-4 text-xs text-gray-500">
+        <div className="px-4 pb-4 text-xs text-gray-500 dark:text-slate-400">
           <p>• Ensure good lighting for better analysis results</p>
           <p>• Hold camera steady and wait for focus</p>
           <p>• Make sure the entire product is visible in the frame</p>
