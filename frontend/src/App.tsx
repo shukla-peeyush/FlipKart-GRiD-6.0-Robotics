@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Upload, Camera, Check, X, Smartphone } from 'lucide-react';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
-import UploadArea from './components/UploadArea';
 import FeatureSelector from './components/FeatureSelector';
 import ResultCard from './components/ResultCard';
 import CameraModal from './components/CameraModal';
@@ -10,6 +10,7 @@ import LoginModal from './components/LoginModal';
 import EditProfileModal from './components/EditProfileModal';
 import Dashboard from './components/Dashboard';
 import LiveDetectionModal from './components/LiveDetectionModal';
+import IPWebcamUrlInput from './components/IPWebcamUrlInput';
 import Toast from './components/Toast';
 import type { ToastMessage } from './components/Toast';
 import { getCurrentUser, logout as apiLogout, analyzeImage, getHistory, deleteHistoryItem } from './utils/api';
@@ -168,9 +169,9 @@ function App() {
   };
 
   const handleOpenCamera = () => {
-    if (inputMethod === 'LiveDetection') {
-      setShowLiveDetectionModal(true);
-    } else {
+    // For Live Detection, we don't open a modal anymore - it's embedded in the page
+    // Only open modal for Camera capture
+    if (inputMethod === 'Camera') {
       setShowCameraModal(true);
     }
   };
@@ -450,30 +451,175 @@ function App() {
       case 'NewTest':
         return (
           <div className="space-y-6">
-            {/* Control Panel */}
-            <div className="space-y-6">
-              <UploadArea
-                onFile={handleFileSelect}
-                onOpenCamera={handleOpenCamera}
-                selectedFile={selectedFile}
-                inputMethod={inputMethod}
-                onInputMethodChange={setInputMethod}
-                capturedImage={capturedImage}
-                isUploading={isAnalyzing}
-                useIPWebcamForCamera={useIPWebcamForCamera}
-                onToggleIPWebcamForCamera={() => setUseIPWebcamForCamera(!useIPWebcamForCamera)}
-                useIPWebcamForLiveDetection={useIPWebcamForLiveDetection}
-                onToggleIPWebcamForLiveDetection={() => setUseIPWebcamForLiveDetection(!useIPWebcamForLiveDetection)}
-                ipWebcamUrl={ipWebcamUrl}
-                onIpWebcamUrlChange={setIpWebcamUrl}
-                onSaveIpWebcamUrl={handleSaveIpWebcamUrl}
-              />
-              
-              <FeatureSelector
-                selectedServices={selectedServices}
-                onToggle={handleServiceToggle}
-                disabled={isAnalyzing}
-              />
+            {/* Input Method Selector - Always visible at top */}
+            <div className="card">
+              <div className="flex items-center justify-center space-x-3">
+                <button
+                  onClick={() => setInputMethod('Upload')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    inputMethod === 'Upload' 
+                      ? "bg-blue-100 text-blue-700" 
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}>
+                  <div className="flex items-center space-x-2">
+                    <Upload className="w-4 h-4" />
+                    <span>Upload Image</span>
+                  </div>
+                </button>
+                
+                <button
+                  onClick={() => setInputMethod('Camera')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    inputMethod === 'Camera' 
+                      ? "bg-blue-100 text-blue-700" 
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}>
+                  <div className="flex items-center space-x-2">
+                    <Camera className="w-4 h-4" />
+                    <span>Capture Photo</span>
+                  </div>
+                </button>
+                
+                <button
+                  onClick={() => setInputMethod('LiveDetection')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    inputMethod === 'LiveDetection' 
+                      ? "bg-blue-100 text-blue-700" 
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}>
+                  <div className="flex items-center space-x-2">
+                    <Camera className="w-4 h-4" />
+                    <span>Live Detection</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* Content based on selected input method */}
+            {inputMethod === 'LiveDetection' ? (
+              /* Live Detection Interface */
+              <div className="space-y-4">
+                {/* IP Webcam Toggle */}
+                <div className="card">
+                  <div className="bg-gray-50 dark:bg-slate-700/30 border border-gray-200 dark:border-slate-600 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <Smartphone className="w-5 h-5 text-green-600" />
+                        <div className="text-left">
+                          <p className="text-sm font-medium text-gray-900 dark:text-slate-100">Use IP Webcam</p>
+                          <p className="text-xs text-gray-500 dark:text-slate-400">
+                            {useIPWebcamForLiveDetection ? 'Currently Using smartphone camera' : 'Currently Using laptop camera'}
+                          </p>
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          className="sr-only peer" 
+                          checked={useIPWebcamForLiveDetection}
+                          onChange={() => setUseIPWebcamForLiveDetection(!useIPWebcamForLiveDetection)}
+                        />
+                        <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                      </label>
+                    </div>
+                  </div>
+                  
+                  {useIPWebcamForLiveDetection && (
+                    <div className="mt-3">
+                      <IPWebcamUrlInput
+                        url={ipWebcamUrl}
+                        onUrlChange={setIpWebcamUrl}
+                        onSave={handleSaveIpWebcamUrl}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Live Detection Video Feed */}
+                <LiveDetectionModal
+                  onClose={() => setInputMethod('Upload')}
+                  useIPWebcam={useIPWebcamForLiveDetection}
+                  webcamUrl={ipWebcamUrl}
+                  embedded={true}
+                />
+              </div>
+            ) : inputMethod === 'Upload' ? (
+              /* Upload Interface */
+              <>
+                <div className="card">
+                  <div
+                    className="rounded-lg border-2 border-dashed border-gray-300 dark:border-slate-600 p-8 flex flex-col items-center gap-4 cursor-pointer transition-all hover:border-gray-400 dark:hover:border-slate-500"
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const files = e.dataTransfer.files;
+                      if (files.length > 0 && files[0].type.startsWith('image/')) {
+                        handleFileSelect(files[0]);
+                      }
+                    }}
+                    onClick={() => document.getElementById('file-upload')?.click()}>
+                    
+                    {isAnalyzing ? (
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                    ) : (
+                      <Upload className="w-12 h-12 text-gray-400" />
+                    )}
+                    
+                    <div className="text-center">
+                      <p className="text-lg font-medium text-gray-700 dark:text-slate-200">
+                        {isAnalyzing ? "Processing..." : "Drop image here or click to upload"}
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
+                        Supports JPG, PNG, WEBP up to 10MB
+                      </p>
+                    </div>
+
+                    <input
+                      id="file-upload"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const files = e.target.files;
+                        if (files && files.length > 0) {
+                          handleFileSelect(files[0]);
+                        }
+                      }}
+                      className="hidden"
+                    />
+                  </div>
+
+                  {selectedFile && (
+                    <div className="mt-4 bg-gray-50 dark:bg-slate-700 rounded-lg p-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="flex-shrink-0">
+                          <Check className="w-8 h-8 text-green-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 dark:text-slate-100">
+                            {selectedFile.name}
+                          </p>
+                          <p className="text-sm text-gray-500 dark:text-slate-400">
+                            {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
+                        <button 
+                          className="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleFileSelect(null);
+                          }}>
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <FeatureSelector
+                  selectedServices={selectedServices}
+                  onToggle={handleServiceToggle}
+                  disabled={isAnalyzing}
+                />
               
               {/* Action buttons */}
               <div className="flex items-center justify-between">
@@ -507,11 +653,134 @@ function App() {
                     </span>
                   </div>
                 )}
-              </div>
-            </div>
+                </div>
+              </>
+            ) : (
+              /* Camera Interface */
+              <>
+                <div className="card">
+                  <div className="text-center space-y-4">
+                    <div className="bg-gray-100 dark:bg-slate-700 rounded-lg p-8 border-2 border-dashed border-gray-300 dark:border-slate-600">
+                      {useIPWebcamForCamera ? (
+                        <Smartphone className="w-16 h-16 text-green-600 mx-auto mb-4" />
+                      ) : (
+                        <Camera className="w-16 h-16 text-gray-400 dark:text-slate-500 mx-auto mb-4" />
+                      )}
+                      <p className="text-lg font-medium text-gray-700 dark:text-slate-200 mb-2">
+                        {useIPWebcamForCamera ? 'IP Webcam Photo Capture' : 'Camera Ready'}
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">
+                        {useIPWebcamForCamera 
+                          ? 'Use your smartphone camera to capture photos'
+                          : 'Click below to open camera and capture an image'}
+                      </p>
+                      <button 
+                        type="button"
+                        className="btn-primary"
+                        onClick={handleOpenCamera}>
+                        Open Camera
+                      </button>
+                    </div>
 
-            {/* Results Section */}
-            {analysisResults && (
+                    {/* Camera Source Toggle */}
+                    <div className="space-y-3">
+                      <div className="bg-gray-50 dark:bg-slate-700/30 border border-gray-200 dark:border-slate-600 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <Smartphone className="w-5 h-5 text-green-600" />
+                            <div className="text-left">
+                              <p className="text-sm font-medium text-gray-900 dark:text-slate-100">Use IP Webcam</p>
+                              <p className="text-xs text-gray-500 dark:text-slate-400">
+                                {useIPWebcamForCamera ? 'Using smartphone camera' : 'Using laptop camera'}
+                              </p>
+                            </div>
+                          </div>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input 
+                              type="checkbox" 
+                              className="sr-only peer" 
+                              checked={useIPWebcamForCamera}
+                              onChange={() => setUseIPWebcamForCamera(!useIPWebcamForCamera)}
+                            />
+                            <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                          </label>
+                        </div>
+                      </div>
+                      
+                      {useIPWebcamForCamera && (
+                        <IPWebcamUrlInput
+                          url={ipWebcamUrl}
+                          onUrlChange={setIpWebcamUrl}
+                          onSave={handleSaveIpWebcamUrl}
+                        />
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <FeatureSelector
+                  selectedServices={selectedServices}
+                  onToggle={handleServiceToggle}
+                  disabled={isAnalyzing}
+                />
+
+                {capturedImage && (
+                  <div className="card">
+                    <div className="bg-gray-50 dark:bg-slate-700 rounded-lg p-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="flex-shrink-0">
+                          <Check className="w-8 h-8 text-green-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 dark:text-slate-100">
+                            Captured Image
+                          </p>
+                          <p className="text-sm text-gray-500 dark:text-slate-400">
+                            Ready for analysis
+                          </p>
+                        </div>
+                        <button 
+                          className="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300"
+                          onClick={() => setCapturedImage(null)}>
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Action buttons */}
+                <div className="flex items-center justify-between">
+                  <div className="flex space-x-3">
+                    <button
+                      className={`btn-primary ${!canAnalyze ? "opacity-50 cursor-not-allowed" : ""}`}
+                      onClick={handleAnalyze}
+                      disabled={!canAnalyze}>
+                      {isAnalyzing ? (
+                        <div className="flex items-center space-x-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          <span>Analyzing...</span>
+                        </div>
+                      ) : (
+                        <span>Analyze Image</span>
+                      )}
+                    </button>
+                  </div>
+                  
+                  {selectedServices.length > 0 && (
+                    <div className="text-sm text-gray-600 dark:text-slate-400">
+                      <span>Est. time: ~</span>
+                      <span className="font-medium">
+                        {selectedServices.length * 3}s
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* Results Section - Only show for Upload/Camera, not Live Detection */}
+            {inputMethod !== 'LiveDetection' && analysisResults && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100">Analysis Results</h2>

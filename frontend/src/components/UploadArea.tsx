@@ -198,7 +198,7 @@ const UploadArea: React.FC<UploadAreaProps> = ({
                       <div className="text-left">
                         <p className="text-sm font-medium text-gray-900 dark:text-slate-100">Use IP Webcam</p>
                         <p className="text-xs text-gray-500 dark:text-slate-400">
-                          {useIPWebcamForCamera ? 'Using smartphone camera' : 'Using laptop camera'}
+                          {useIPWebcamForCamera ? 'Using smartphone camera' : 'Using aptop webCam'}
                         </p>
                       </div>
                     </div>

@@ -5,17 +5,20 @@ interface LiveDetectionModalProps {
   onClose: () => void;
   useIPWebcam?: boolean;
   webcamUrl?: string;
+  embedded?: boolean;
 }
 
 const LiveDetectionModal: React.FC<LiveDetectionModalProps> = ({ 
   onClose,
   useIPWebcam = false,
-  webcamUrl = 'http://100.111.108.142:8080'
+  webcamUrl = 'http://100.111.108.142:8080',
+  embedded = false
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const ipWebcamImgRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const displayCanvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -23,9 +26,27 @@ const LiveDetectionModal: React.FC<LiveDetectionModalProps> = ({
   const [isDetecting, setIsDetecting] = useState(false);
   const [objectCount, setObjectCount] = useState<number>(0);
   const [fps, setFps] = useState<number>(0);
+  const [cameraStarted, setCameraStarted] = useState(false);
+  const [selectedFps, setSelectedFps] = useState<number>(5); // Default 5 FPS
+  const [useMaxFps, setUseMaxFps] = useState<boolean>(false);
 
-  // Initialize camera based on mode
+  // Scroll into view when camera starts
   useEffect(() => {
+    if (cameraStarted && containerRef.current) {
+      // Smooth scroll to bring the video section into view
+      setTimeout(() => {
+        containerRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }, 100);
+    }
+  }, [cameraStarted]);
+
+  // Initialize camera based on mode - only when camera is started
+  useEffect(() => {
+    if (!cameraStarted) return;
+    
     if (useIPWebcam) {
       startIPWebcam();
     } else {
@@ -35,7 +56,7 @@ const LiveDetectionModal: React.FC<LiveDetectionModalProps> = ({
     return () => {
       stopCamera();
     };
-  }, [useIPWebcam]);
+  }, [useIPWebcam, cameraStarted]);
 
 
   // Preview loop - shows live feed only when NOT detecting
@@ -86,7 +107,10 @@ const LiveDetectionModal: React.FC<LiveDetectionModalProps> = ({
   useEffect(() => {
     if (!isDetecting) return;
 
-    const DETECTION_INTERVAL = 200; // 5 FPS
+    // Calculate interval based on selected FPS
+    // If useMaxFps is true, use requestAnimationFrame (max system FPS)
+    // Otherwise use selected FPS (interval in ms = 1000 / fps)
+    const DETECTION_INTERVAL = useMaxFps ? 0 : Math.floor(1000 / selectedFps);
     let intervalId: number;
     let lastTime = Date.now();
     let frameCount = 0;
@@ -186,14 +210,31 @@ const LiveDetectionModal: React.FC<LiveDetectionModalProps> = ({
     };
 
     // Start detection loop
-    intervalId = setInterval(detectLoop, DETECTION_INTERVAL);
-
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
-  }, [isDetecting, useIPWebcam, webcamUrl]);
+    if (useMaxFps) {
+      // Use requestAnimationFrame for max FPS
+      let rafId: number;
+      const rafLoop = () => {
+        detectLoop();
+        rafId = requestAnimationFrame(rafLoop);
+      };
+      rafId = requestAnimationFrame(rafLoop);
+      
+      return () => {
+        if (rafId) {
+          cancelAnimationFrame(rafId);
+        }
+      };
+    } else {
+      // Use setInterval for specific FPS
+      intervalId = setInterval(detectLoop, DETECTION_INTERVAL);
+      
+      return () => {
+        if (intervalId) {
+          clearInterval(intervalId);
+        }
+      };
+    }
+  }, [isDetecting, useIPWebcam, webcamUrl, selectedFps, useMaxFps]);
 
   const startIPWebcam = () => {
     setIsLoading(true);
@@ -271,17 +312,32 @@ const LiveDetectionModal: React.FC<LiveDetectionModalProps> = ({
     setIsDetecting(!isDetecting);
   };
 
+  const handleStartCamera = () => {
+    setCameraStarted(true);
+  };
+
+  const handleStopDetection = () => {
+    stopCamera();
+    setCameraStarted(false);
+    setIsDetecting(false);
+    setObjectCount(0);
+    setFps(0);
+    setError(null);
+  };
+
   const handleClose = () => {
     stopCamera();
+    setCameraStarted(false);
     onClose();
   };
 
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-lg max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Header */}
+  const content = (
+    <>
+        {/* Header - Simplified for embedded mode */}
         <div className={`flex items-center justify-between p-4 border-b dark:border-slate-700 ${
+          embedded ? 'rounded-t-lg' : ''
+        } ${
           useIPWebcam 
             ? 'bg-gradient-to-r from-green-600 to-emerald-600'
             : 'bg-gradient-to-r from-blue-600 to-purple-600'
@@ -303,16 +359,53 @@ const LiveDetectionModal: React.FC<LiveDetectionModalProps> = ({
               </p>
             </div>
           </div>
-          <button
-            onClick={handleClose}
-            className="text-white hover:text-gray-200 p-1 transition-colors">
-            <X className="w-6 h-6" />
-          </button>
+          {!embedded && (
+            <button
+              onClick={handleClose}
+              className="text-white hover:text-gray-200 p-1 transition-colors">
+              <X className="w-6 h-6" />
+            </button>
+          )}
         </div>
 
         {/* Detection Display */}
-        <div className="flex-1 bg-black relative overflow-hidden">
-          {isLoading && !error && (
+        <div className="bg-black relative overflow-hidden" style={{ height: '600px' }}>
+          {!cameraStarted && !error && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-900 to-black z-10">
+              <div className="text-white text-center max-w-md px-4">
+                <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-green-500 to-blue-500 rounded-full flex items-center justify-center">
+                  {useIPWebcam ? (
+                    <Smartphone className="w-10 h-10" />
+                  ) : (
+                    <Camera className="w-10 h-10" />
+                  )}
+                </div>
+                <h3 className="text-2xl font-bold mb-2">
+                  {useIPWebcam ? 'IP Webcam Live Detection' : 'Live Object Detection'}
+                </h3>
+                <p className="text-gray-300 mb-6">
+                  {useIPWebcam 
+                    ? 'Ready to connect to your smartphone camera for real-time object detection'
+                    : 'Ready to use your laptop camera for real-time object detection'}
+                </p>
+                <button
+                  onClick={handleStartCamera}
+                  className="px-6 py-3 bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white rounded-lg font-medium transition-all duration-200 transform hover:scale-105">
+                  <div className="flex items-center space-x-2">
+                    <Play className="w-5 h-5" />
+                    <span>Start Live Detection</span>
+                  </div>
+                </button>
+                <p className="text-xs text-gray-400 mt-4">
+                  {useIPWebcam 
+                    ? `Connecting to: ${webcamUrl}`
+                    : 'Camera permission will be requested'}
+                </p>
+              </div>
+            </div>
+          )}
+          
+          {isLoading && !error && cameraStarted && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-900 z-10">
               <div className="text-white text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
@@ -438,45 +531,136 @@ const LiveDetectionModal: React.FC<LiveDetectionModalProps> = ({
         </div>
 
         {/* Controls */}
-        <div className="p-4 bg-gray-50 dark:bg-slate-700 border-t dark:border-slate-600">
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-600 dark:text-slate-300">
-              <p className="font-medium">✓ Green boxes show detected objects</p>
-              <p className="text-xs mt-1">
-                {useIPWebcam 
-                  ? '✓ Using smartphone camera at ~5 FPS' 
-                  : '✓ Using laptop camera at ~5 FPS'}
-              </p>
+        <div className={`p-4 bg-gray-50 dark:bg-slate-700 border-t dark:border-slate-600 ${
+          embedded ? 'rounded-b-lg' : ''
+        }`}>
+          {/* Info Text */}
+          <div className="text-sm text-gray-600 dark:text-slate-300 mb-3">
+            <p className="font-medium">✓ Green boxes show detected objects</p>
+            <p className="text-xs mt-1">
+              {useIPWebcam 
+                ? `✓ Using smartphone camera at ${useMaxFps ? 'max' : `~${selectedFps}`} FPS` 
+                : `✓ Using laptop camera at ${useMaxFps ? 'max' : `~${selectedFps}`} FPS`}
+            </p>
+          </div>
+
+          {/* FPS Control & Action Buttons - Fixed widths to prevent jumping */}
+          <div className="grid grid-cols-[1fr_auto] gap-3 items-center">
+            {/* FPS Control - Fixed space with border */}
+            <div className="flex items-center gap-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg px-3 py-2">
+              <label className="text-xs font-medium text-gray-600 dark:text-slate-400 uppercase whitespace-nowrap">
+                Speed:
+              </label>
+              <div className="flex-1 flex items-center gap-2">
+                <input
+                  type="range"
+                  min="5"
+                  max="40"
+                  value={selectedFps}
+                  onChange={(e) => {
+                    setSelectedFps(Number(e.target.value));
+                    setUseMaxFps(false);
+                  }}
+                  disabled={useMaxFps || !cameraStarted}
+                  className="flex-1 h-2 rounded-lg appearance-none cursor-pointer disabled:opacity-40"
+                  style={{
+                    background: useMaxFps || !cameraStarted 
+                      ? '#d1d5db' 
+                      : `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((selectedFps - 5) / 35) * 100}%, #d1d5db ${((selectedFps - 5) / 35) * 100}%, #d1d5db 100%)`
+                  }}
+                />
+                <span className="text-base font-bold text-blue-600 dark:text-blue-400 w-8 text-center">
+                  {useMaxFps ? '-' : selectedFps}
+                </span>
+                <div className="relative group">
+                  <button
+                    onClick={() => setUseMaxFps(!useMaxFps)}
+                    disabled={!cameraStarted}
+                    className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                      useMaxFps
+                        ? 'bg-green-600 text-white shadow-sm'
+                        : 'bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-slate-200 hover:bg-gray-300'
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}>
+                    {useMaxFps ? '⚡' : 'MAX'}
+                  </button>
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                    {useMaxFps ? 'Using max FPS supported by your device' : 'Use maximum FPS'}
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="flex space-x-3">
-              <button
-                onClick={toggleDetection}
-                disabled={!!error}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                  isDetecting
-                    ? 'bg-orange-500 hover:bg-orange-600 text-white'
-                    : 'bg-green-500 hover:bg-green-600 text-white'
-                } disabled:opacity-50 disabled:cursor-not-allowed`}>
-                {isDetecting ? (
-                  <>
-                    <Pause className="w-4 h-4" />
-                    <span>Pause</span>
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-4 h-4" />
-                    <span>Start</span>
-                  </>
-                )}
-              </button>
-              <button
-                onClick={handleClose}
-                className="px-4 py-2 bg-gray-200 dark:bg-slate-600 hover:bg-gray-300 dark:hover:bg-slate-500 text-gray-700 dark:text-slate-100 rounded-lg font-medium transition-colors">
-                Close
-              </button>
+
+            {/* Action Buttons - Fixed space (always reserves width) */}
+            <div className="flex gap-3 min-w-[230px] justify-center">
+              {cameraStarted ? (
+                <>
+                  <div className="relative group">
+                    <button
+                      onClick={toggleDetection}
+                      disabled={!!error}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all transform hover:scale-105 hover:shadow-lg ${
+                        isDetecting
+                          ? 'bg-orange-500 hover:bg-orange-600 text-white'
+                          : 'bg-green-500 hover:bg-green-600 text-white'
+                      } disabled:opacity-50 disabled:hover:scale-100`}>
+                      {isDetecting ? (
+                        <>
+                          <Pause className="w-4 h-4" />
+                          <span>Pause</span>
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-4 h-4" />
+                          <span>Resume</span>
+                        </>
+                      )}
+                    </button>
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                      {isDetecting ? 'Pause object detection' : 'Resume object detection'}
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                    </div>
+                  </div>
+                  <div className="relative group">
+                    <button
+                      onClick={handleStopDetection}
+                      className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-all transform hover:scale-105 hover:shadow-lg">
+                      <X className="w-4 h-4" />
+                      <span>Stop</span>
+                    </button>
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                      Stop and close camera
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                // Reserve space even when buttons not shown
+                <div className="w-[230px]"></div>
+              )}
+              {!embedded && (
+                <button
+                  onClick={handleClose}
+                  className="px-4 py-2 bg-gray-200 dark:bg-slate-600 hover:bg-gray-300 text-gray-700 dark:text-slate-100 rounded-lg font-medium">
+                  Close
+                </button>
+              )}
             </div>
           </div>
         </div>
+    </>
+  );
+
+  return embedded ? (
+    // Embedded mode - no modal wrapper
+    <div ref={containerRef} className="bg-white dark:bg-slate-800 rounded-lg w-full flex flex-col overflow-hidden shadow-md">
+      {content}
+    </div>
+  ) : (
+    // Modal mode - full modal wrapper
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-lg max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        {content}
       </div>
     </div>
   );
