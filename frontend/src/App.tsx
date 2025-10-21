@@ -32,7 +32,7 @@ function App() {
   const [useIPWebcamForLiveDetection, setUseIPWebcamForLiveDetection] = useState(false);
   const [ipWebcamUrl, setIpWebcamUrl] = useState(() => {
     const saved = localStorage.getItem('ipWebcamUrl');
-    return saved || 'http://100.111.108.142:8080';
+    return saved || '';
   });
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);

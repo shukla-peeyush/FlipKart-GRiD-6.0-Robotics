@@ -32,7 +32,7 @@ const UploadArea: React.FC<UploadAreaProps> = ({
   onToggleIPWebcamForCamera,
   useIPWebcamForLiveDetection = false,
   onToggleIPWebcamForLiveDetection,
-  ipWebcamUrl = 'http://100.111.108.142:8080',
+  ipWebcamUrl = '',
   onIpWebcamUrlChange,
   onSaveIpWebcamUrl
 }) => {

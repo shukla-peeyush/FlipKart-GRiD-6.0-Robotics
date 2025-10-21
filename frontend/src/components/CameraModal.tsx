@@ -12,7 +12,7 @@ const CameraModal: React.FC<CameraModalProps> = ({
   onCapture, 
   onClose,
   useIPWebcam = false,
-  webcamUrl = 'http://100.111.108.142:8080'
+  webcamUrl
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);

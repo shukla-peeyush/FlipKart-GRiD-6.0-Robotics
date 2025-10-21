@@ -11,7 +11,7 @@ interface LiveDetectionModalProps {
 const LiveDetectionModal: React.FC<LiveDetectionModalProps> = ({ 
   onClose,
   useIPWebcam = false,
-  webcamUrl = 'http://100.111.108.142:8080',
+  webcamUrl,
   embedded = false
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -21,7 +21,7 @@ const LiveDetectionModal: React.FC<LiveDetectionModalProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   
   const [stream, setStream] = useState<MediaStream | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDetecting, setIsDetecting] = useState(false);
   const [objectCount, setObjectCount] = useState<number>(0);
@@ -56,7 +56,7 @@ const LiveDetectionModal: React.FC<LiveDetectionModalProps> = ({
     return () => {
       stopCamera();
     };
-  }, [useIPWebcam, cameraStarted]);
+  }, [cameraStarted]); // Only depend on cameraStarted to prevent re-initialization
 
 
   // Preview loop - shows live feed only when NOT detecting
@@ -237,10 +237,16 @@ const LiveDetectionModal: React.FC<LiveDetectionModalProps> = ({
   }, [isDetecting, useIPWebcam, webcamUrl, selectedFps, useMaxFps]);
 
   const startIPWebcam = () => {
+    // Validate webcamUrl first
+    if (!webcamUrl || webcamUrl.trim() === '') {
+      setError('No IP Webcam URL provided. Please enter the URL and try again.');
+      setIsLoading(false);
+      return;
+    }
+    
+    console.log('Starting IP Webcam with URL:', webcamUrl);
     setIsLoading(true);
     setError(null);
-    // Wait for video to actually load before starting detection
-    // The onLoadedMetadata handler will set isLoading to false
   };
 
   const startLaptopCamera = async () => {
@@ -462,21 +468,22 @@ const LiveDetectionModal: React.FC<LiveDetectionModalProps> = ({
           )}
 
           {/* IP Webcam MJPEG stream as img */}
-          {useIPWebcam && (
+          {useIPWebcam && webcamUrl && (
             <img
               ref={ipWebcamImgRef}
-              src={`${webcamUrl}/video`}
+              src={`${webcamUrl.replace(/\/$/, '')}/video`}
               alt="IP Webcam Stream"
               className="hidden"
+              crossOrigin="anonymous"
               onLoad={() => {
-                console.log('IP Webcam stream loaded');
+                console.log('IP Webcam stream loaded successfully from:', webcamUrl);
                 setIsLoading(false);
                 setError(null);
                 setIsDetecting(true); // Auto-start detection
               }}
               onError={(e) => {
-                console.error('IP Webcam stream error:', e);
-                setError('Cannot connect to IP Webcam. Make sure the app is running.');
+                console.error('IP Webcam stream error from:', webcamUrl, e);
+                setError(`Cannot connect to ${webcamUrl}. Check the URL and network.`);
                 setIsLoading(false);
               }}
             />
