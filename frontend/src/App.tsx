@@ -27,6 +27,12 @@ function App() {
   const [analysisResults, setAnalysisResults] = useState<AnalysisResponse | null>(null);
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [showLiveDetectionModal, setShowLiveDetectionModal] = useState(false);
+  const [useIPWebcamForCamera, setUseIPWebcamForCamera] = useState(false);
+  const [useIPWebcamForLiveDetection, setUseIPWebcamForLiveDetection] = useState(false);
+  const [ipWebcamUrl, setIpWebcamUrl] = useState(() => {
+    const saved = localStorage.getItem('ipWebcamUrl');
+    return saved || 'http://100.111.108.142:8080';
+  });
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
@@ -53,6 +59,12 @@ function App() {
   const showToast = (type: 'success' | 'error' | 'info', message: string, duration?: number) => {
     const id = Date.now().toString();
     setToasts(prev => [...prev, { id, type, message, duration }]);
+  };
+
+  // Save IP Webcam URL to localStorage
+  const handleSaveIpWebcamUrl = () => {
+    localStorage.setItem('ipWebcamUrl', ipWebcamUrl);
+    showToast('success', 'IP Webcam URL saved successfully!');
   };
 
   // Handle dark mode toggle
@@ -448,6 +460,13 @@ function App() {
                 onInputMethodChange={setInputMethod}
                 capturedImage={capturedImage}
                 isUploading={isAnalyzing}
+                useIPWebcamForCamera={useIPWebcamForCamera}
+                onToggleIPWebcamForCamera={() => setUseIPWebcamForCamera(!useIPWebcamForCamera)}
+                useIPWebcamForLiveDetection={useIPWebcamForLiveDetection}
+                onToggleIPWebcamForLiveDetection={() => setUseIPWebcamForLiveDetection(!useIPWebcamForLiveDetection)}
+                ipWebcamUrl={ipWebcamUrl}
+                onIpWebcamUrlChange={setIpWebcamUrl}
+                onSaveIpWebcamUrl={handleSaveIpWebcamUrl}
               />
               
               <FeatureSelector
@@ -981,6 +1000,8 @@ function App() {
           <CameraModal
             onCapture={handleCameraCapture}
             onClose={() => setShowCameraModal(false)}
+            useIPWebcam={useIPWebcamForCamera}
+            webcamUrl={ipWebcamUrl}
           />
         )}
       </AnimatePresence>
@@ -990,6 +1011,8 @@ function App() {
         {showLiveDetectionModal && (
           <LiveDetectionModal
             onClose={() => setShowLiveDetectionModal(false)}
+            useIPWebcam={useIPWebcamForLiveDetection}
+            webcamUrl={ipWebcamUrl}
           />
         )}
       </AnimatePresence>
