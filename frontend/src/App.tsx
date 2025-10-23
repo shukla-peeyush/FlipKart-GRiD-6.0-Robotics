@@ -1315,19 +1315,19 @@ function App() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
               transition={{ type: "spring", duration: 0.5 }}
-              className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+              className="bg-white dark:bg-slate-800 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-            <div className="flex items-center justify-between p-6 border-b">
+            <div className="flex items-center justify-between p-6 border-b dark:border-slate-700">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900">Analysis Details</h2>
-                <p className="text-sm text-gray-500 mt-1">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100">Analysis Details</h2>
+                <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
                   {selectedHistoryItem.imageName} • {new Date(selectedHistoryItem.metadata.processedAt).toLocaleString()}
                 </p>
               </div>
               <button
                 onClick={() => setShowDetailsModal(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors">
+                className="text-gray-400 hover:text-gray-600 dark:text-slate-400 dark:hover:text-slate-200 transition-colors">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -1340,14 +1340,14 @@ function App() {
                 {selectedHistoryItem.results.ocr && (
                   <div className="card">
                     <div className="flex items-center space-x-2 mb-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                        <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
                         </svg>
                       </div>
-                      <h3 className="font-medium text-gray-900">OCR (Text Recognition)</h3>
+                      <h3 className="font-medium text-gray-900 dark:text-slate-100">OCR (Text Recognition)</h3>
                     </div>
-                    <div className="bg-gray-50 rounded-lg p-3 text-sm">
+                    <div className="bg-gray-50 dark:bg-slate-700 rounded-lg p-3 text-sm text-gray-900 dark:text-slate-100">
                       <p className="whitespace-pre-wrap">{selectedHistoryItem.results.ocr.text || 'No text detected'}</p>
                     </div>
                     <div className="mt-3 flex space-x-2">
@@ -1368,27 +1368,27 @@ function App() {
                 {selectedHistoryItem.results.productCount && (
                   <div className="card">
                     <div className="flex items-center space-x-2 mb-3">
-                      <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                        <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                        <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
                         </svg>
                       </div>
-                      <h3 className="font-medium text-gray-900">Product Count</h3>
+                      <h3 className="font-medium text-gray-900 dark:text-slate-100">Product Count</h3>
                     </div>
                     <div className="text-center py-4">
-                      <div className="text-3xl font-bold text-green-600">
+                      <div className="text-3xl font-bold text-green-600 dark:text-green-400">
                         {selectedHistoryItem.results.productCount.total}
                       </div>
-                      <div className="text-sm text-gray-500">Products Detected</div>
+                      <div className="text-sm text-gray-500 dark:text-slate-400">Products Detected</div>
                     </div>
                     {selectedHistoryItem.results.productCount.detections && selectedHistoryItem.results.productCount.detections.length > 0 && (
                       <div className="mt-3">
-                        <h4 className="text-sm font-medium text-gray-700 mb-2">Detections:</h4>
+                        <h4 className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Detections:</h4>
                         <div className="space-y-1">
                           {selectedHistoryItem.results.productCount.detections.map((detection, idx) => (
-                            <div key={idx} className="text-xs bg-gray-50 rounded p-2">
-                              <span className="font-medium">{detection.label}</span>
-                              <span className="text-gray-500 ml-2">
+                            <div key={idx} className="text-xs bg-gray-50 dark:bg-slate-700 rounded p-2">
+                              <span className="font-medium text-gray-900 dark:text-slate-100">{detection.label}</span>
+                              <span className="text-gray-500 dark:text-slate-400 ml-2">
                                 ({Math.round(detection.confidence * 100)}% confidence)
                               </span>
                             </div>
@@ -1402,18 +1402,18 @@ function App() {
                 {selectedHistoryItem.results.freshness && (
                   <div className="card">
                     <div className="flex items-center space-x-2 mb-3">
-                      <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-                        <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="w-8 h-8 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
+                        <svg className="w-4 h-4 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707" />
                         </svg>
                       </div>
-                      <h3 className="font-medium text-gray-900">Freshness Detection</h3>
+                      <h3 className="font-medium text-gray-900 dark:text-slate-100">Freshness Detection</h3>
                     </div>
                     <div className="text-center py-4">
-                      <div className="text-3xl font-bold text-orange-600">
+                      <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">
                         {selectedHistoryItem.results.freshness.score}
                       </div>
-                      <div className="text-sm text-gray-500">Freshness Score</div>
+                      <div className="text-sm text-gray-500 dark:text-slate-400">Freshness Score</div>
                       <div className="mt-2">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           selectedHistoryItem.results.freshness.label === 'Fresh' ? 'bg-green-100 text-green-800' :
@@ -1430,33 +1430,33 @@ function App() {
                 {selectedHistoryItem.results.brand && (
                   <div className="card">
                     <div className="flex items-center space-x-2 mb-3">
-                      <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                        <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+                        <svg className="w-4 h-4 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                       </div>
-                      <h3 className="font-medium text-gray-900">Brand Recognition</h3>
+                      <h3 className="font-medium text-gray-900 dark:text-slate-100">Brand Recognition</h3>
                     </div>
                     {selectedHistoryItem.results.brand.matches && selectedHistoryItem.results.brand.matches.length > 0 ? (
                       <div className="space-y-2">
                         {selectedHistoryItem.results.brand.matches.map((match, idx) => (
-                          <div key={idx} className="bg-gray-50 rounded-lg p-3">
+                          <div key={idx} className="bg-gray-50 dark:bg-slate-700 rounded-lg p-3">
                             <div className="flex items-center justify-between">
-                              <span className="font-medium text-gray-900">{match.brand}</span>
+                              <span className="font-medium text-gray-900 dark:text-slate-100">{match.brand}</span>
                               <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                                 match.isCounterfeit ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
                               }`}>
                                 {match.isCounterfeit ? 'Counterfeit' : 'Authentic'}
                               </span>
                             </div>
-                            <div className="text-sm text-gray-500 mt-1">
+                            <div className="text-sm text-gray-500 dark:text-slate-400 mt-1">
                               Confidence: {Math.round(match.confidence * 100)}%
                             </div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <div className="text-center py-4 text-gray-500">
+                      <div className="text-center py-4 text-gray-500 dark:text-slate-400">
                         No brands detected
                       </div>
                     )}
@@ -1464,11 +1464,11 @@ function App() {
                 )}
               </div>
 
-              <div className="mt-6 pt-6 border-t">
+              <div className="mt-6 pt-6 border-t dark:border-slate-700">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-500">Job ID: {selectedHistoryItem.jobId}</p>
-                    <p className="text-sm text-gray-500">Status: {selectedHistoryItem.status}</p>
+                    <p className="text-sm text-gray-500 dark:text-slate-400">Job ID: {selectedHistoryItem.jobId}</p>
+                    <p className="text-sm text-gray-500 dark:text-slate-400">Status: {selectedHistoryItem.status}</p>
                   </div>
                   <button 
                     className="btn-secondary text-sm"

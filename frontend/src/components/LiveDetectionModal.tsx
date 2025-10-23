@@ -236,7 +236,7 @@ const LiveDetectionModal: React.FC<LiveDetectionModalProps> = ({
     }
   }, [isDetecting, useIPWebcam, webcamUrl, selectedFps, useMaxFps]);
 
-  const startIPWebcam = () => {
+  const startIPWebcam = async () => {
     // Validate webcamUrl first
     if (!webcamUrl || webcamUrl.trim() === '') {
       setError('No IP Webcam URL provided. Please enter the URL and try again.');
@@ -247,6 +247,36 @@ const LiveDetectionModal: React.FC<LiveDetectionModalProps> = ({
     console.log('Starting IP Webcam with URL:', webcamUrl);
     setIsLoading(true);
     setError(null);
+
+    // Normalize URL: remove trailing slash, ensure /video endpoint
+    let normalizedUrl = webcamUrl.trim().replace(/\/+$/, '');
+    
+    // If URL doesn't end with /video, add it
+    if (!normalizedUrl.endsWith('/video')) {
+      normalizedUrl = `${normalizedUrl}/video`;
+    }
+    
+    console.log('Normalized URL:', normalizedUrl);
+    
+    // Poll for image readiness and start detection when ready
+    let attempts = 0;
+    const maxAttempts = 30; // 3 seconds total
+    
+    const checkImageReady = setInterval(() => {
+      attempts++;
+      
+      if (ipWebcamImgRef.current && ipWebcamImgRef.current.complete && ipWebcamImgRef.current.naturalWidth > 0) {
+        console.log('IP Webcam stream is ready, starting detection');
+        clearInterval(checkImageReady);
+        setIsLoading(false);
+        setIsDetecting(true);
+      } else if (attempts >= maxAttempts) {
+        console.log('Timeout waiting for stream, starting anyway');
+        clearInterval(checkImageReady);
+        setIsLoading(false);
+        setIsDetecting(true);
+      }
+    }, 100); // Check every 100ms
   };
 
   const startLaptopCamera = async () => {
@@ -468,26 +498,33 @@ const LiveDetectionModal: React.FC<LiveDetectionModalProps> = ({
           )}
 
           {/* IP Webcam MJPEG stream as img */}
-          {useIPWebcam && webcamUrl && (
-            <img
-              ref={ipWebcamImgRef}
-              src={`${webcamUrl.replace(/\/$/, '')}/video`}
-              alt="IP Webcam Stream"
-              className="hidden"
-              crossOrigin="anonymous"
-              onLoad={() => {
-                console.log('IP Webcam stream loaded successfully from:', webcamUrl);
-                setIsLoading(false);
-                setError(null);
-                setIsDetecting(true); // Auto-start detection
-              }}
-              onError={(e) => {
-                console.error('IP Webcam stream error from:', webcamUrl, e);
-                setError(`Cannot connect to ${webcamUrl}. Check the URL and network.`);
-                setIsLoading(false);
-              }}
-            />
-          )}
+          {useIPWebcam && webcamUrl && (() => {
+            // Normalize URL: remove trailing slash, ensure /video endpoint
+            let streamUrl = webcamUrl.trim().replace(/\/+$/, '');
+            
+            // If URL doesn't already end with /video, add it
+            if (!streamUrl.endsWith('/video')) {
+              streamUrl = `${streamUrl}/video`;
+            }
+            
+            return (
+              <img
+                ref={ipWebcamImgRef}
+                src={streamUrl}
+                alt="IP Webcam Stream"
+                className="hidden"
+                onLoad={() => {
+                  console.log('IP Webcam stream loaded successfully from:', streamUrl);
+                  // Don't change loading state here - timeout handles it
+                }}
+                onError={(e) => {
+                  console.error('IP Webcam stream error from:', streamUrl, e);
+                  setError(`Cannot connect to IP Webcam. Check the URL and network.`);
+                  setIsLoading(false);
+                }}
+              />
+            );
+          })()}
 
           {/* Hidden canvas for frame capture */}
           <canvas ref={canvasRef} className="hidden" />

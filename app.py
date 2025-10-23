@@ -12,8 +12,47 @@ from functools import wraps
 import random
 
 def extract_text(file_path):
-    # For now, return a sample response - can be replaced with actual OCR
-    return "Sample OCR text: Product Name, Expiry Date, etc."
+    """Extract text from image using OCR with preprocessing"""
+    try:
+        import pytesseract
+        from PIL import Image, ImageEnhance, ImageFilter
+        import cv2
+        import numpy as np
+        
+        # Method 1: Try standard PIL OCR first
+        img_pil = Image.open(file_path)
+        text1 = pytesseract.image_to_string(img_pil)
+        
+        # Method 2: Try with OpenCV preprocessing for better accuracy
+        img_cv = cv2.imread(file_path)
+        # Convert to grayscale
+        gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
+        # Apply thresholding
+        _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        text2 = pytesseract.image_to_string(thresh)
+        
+        # Method 3: Try with contrast enhancement
+        img_enhanced = img_pil.convert('L')  # Convert to grayscale
+        enhancer = ImageEnhance.Contrast(img_enhanced)
+        img_enhanced = enhancer.enhance(2.0)  # Increase contrast
+        text3 = pytesseract.image_to_string(img_enhanced)
+        
+        # Combine all extracted text
+        combined_text = f"{text1}\n{text2}\n{text3}"
+        extracted_text = combined_text.strip() if combined_text.strip() else "No text detected"
+        
+        print(f"OCR extracted {len(extracted_text)} characters from 3 methods")
+        print(f"Method 1 (Standard): {text1[:100]}...")
+        print(f"Method 2 (Preprocessed): {text2[:50]}...")
+        print(f"Method 3 (Enhanced): {text3[:50]}...")
+        print(f"Combined text: {extracted_text[:200]}...")
+        
+        return extracted_text
+    except Exception as e:
+        print(f"OCR extraction error: {e}")
+        import traceback
+        traceback.print_exc()
+        return "OCR service unavailable"
 
 def count_products(file_path):
     # Try to use the actual object detection function
@@ -41,6 +80,14 @@ UPLOAD_FOLDER = 'static/uploads'
 PROFILE_PICTURES_FOLDER = 'static/profile_pictures'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['PROFILE_PICTURES_FOLDER'] = PROFILE_PICTURES_FOLDER
+
+# Configure logging for brand detection
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(levelname)s - %(name)s - %(message)s',
+    force=True
+)
 
 # Database setup
 def init_db():
@@ -525,14 +572,42 @@ def capture_image():
 
         if 'brand' in selected_services:
             try:
-                # Mock brand recognition since the import is commented out
-                results['brand'] = {
-                    'matches': [
-                        {'brand': 'Sample Brand', 'confidence': 0.85, 'bbox': [0, 0, 100, 100], 'isCounterfeit': False}
-                    ]
-                }
+                # Use hybrid OCR + CLIP brand detection
+                from classifier.hybrid_brand_detector import detect_brands_hybrid
+                
+                # Get OCR text - extract it if not already done
+                ocr_text = results.get('ocr', {}).get('text', '')
+                
+                # If OCR wasn't run, extract text now for brand detection
+                if not ocr_text or ocr_text == 'No text detected':
+                    print("Brand detection: OCR not run, extracting text now...")
+                    ocr_text = extract_text(file_path)
+                    print(f"Brand detection: Extracted text for brand matching: {ocr_text[:100]}...")
+                
+                # Detect brands with hybrid pipeline (OCR + CLIP fallback)
+                brand_result = detect_brands_hybrid(
+                    image_path=file_path,
+                    ocr_text=ocr_text,
+                    ocr_threshold=0.70,  # If OCR confidence < 0.70, use CLIP
+                    clip_threshold=0.60,  # Higher threshold for confident matches only
+                    verbose=True  # Enable detailed logging
+                )
+                
+                # Explicitly log and verify detection method
+                print(f"DEBUG: Detection method from hybrid: {brand_result.get('detection_method')}")
+                print(f"DEBUG: Matches: {brand_result.get('matches')}")
+                
+                results['brand'] = brand_result
             except Exception as e:
-                results['brand'] = {'matches': []}
+                print(f"Brand detection error: {e}")
+                import traceback
+                traceback.print_exc()
+                results['brand'] = {
+                    'matches': [], 
+                    'total_brands_detected': 0,
+                    'detection_method': 'hybrid',
+                    'error': str(e)
+                }
 
         # Save to user history
         conn = sqlite3.connect('users.db')
