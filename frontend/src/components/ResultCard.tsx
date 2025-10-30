@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Hash, Leaf, Shield, Loader, AlertCircle, Copy, Save, Download, RotateCcw } from 'lucide-react';
+import { FileText, Hash, Leaf, Shield, Loader, AlertCircle, Copy, Eye, Download, RotateCcw } from 'lucide-react';
 import type { ServiceType, AnalysisStatus } from '../types';
 
 interface ResultCardProps {
@@ -221,7 +221,7 @@ const ResultCard: React.FC<ResultCardProps> = ({ service, status, result, onActi
           <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
           <p className="text-sm text-gray-600">Analysis failed. Please try again.</p>
           <button 
-            className="btn-secondary text-xs mt-3"
+            className="btn-secondary text-xs mt-3 mx-auto flex items-center"
             onClick={() => onAction('retry')}>
             <RotateCcw className="w-3 h-3 mr-1" />
             Retry
@@ -262,10 +262,10 @@ const ResultCard: React.FC<ResultCardProps> = ({ service, status, result, onActi
       <div className="flex items-center justify-between pt-4 border-t border-gray-200">
         <div className="flex space-x-2">
           <button 
-            className="btn-secondary text-xs py-1 px-2"
-            onClick={() => onAction('save')}>
-            <Save className="w-3 h-3 mr-1" />
-            Save Result
+            className="flex items-center btn-secondary text-xs py-1 px-2 gap-1"
+            onClick={() => onAction('details')}>
+            <Eye className="w-3 h-3 mr-1" />
+            View Details
           </button>
           {status === 'Success' && (
             <button 

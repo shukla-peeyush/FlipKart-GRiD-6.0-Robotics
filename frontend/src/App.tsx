@@ -14,7 +14,7 @@ import IPWebcamUrlInput from './components/IPWebcamUrlInput';
 import Toast from './components/Toast';
 import type { ToastMessage } from './components/Toast';
 import { getCurrentUser, logout as apiLogout, analyzeImage, getHistory, deleteHistoryItem } from './utils/api';
-import type { NavigationPage, ServiceType, InputMethod, AnalysisResponse, User, HistoryItem } from './types';
+import type { NavigationPage, ServiceType, InputMethod, AnalysisResponse, AnalysisResults, AnalysisStatus, User, HistoryItem } from './types';
 
 function App() {
   // Application state
@@ -214,7 +214,27 @@ function App() {
       );
       
       setAnalysisResults(response);
-      showToast('success', 'Analysis completed successfully!');
+      
+      // Check results and show appropriate toast messages
+      const failedServices: string[] = [];
+      const successfulServices: string[] = [];
+      
+      selectedServices.forEach(service => {
+        const status = getServiceStatus(service, response.results);
+        if (status === 'Failed') {
+          failedServices.push(service);
+        } else {
+          successfulServices.push(service);
+        }
+      });
+      
+      if (failedServices.length === selectedServices.length) {
+        showToast('error', 'Analysis completed but no results were found for any service');
+      } else if (failedServices.length > 0) {
+        showToast('info', `Analysis completed with mixed results. ${failedServices.length} service(s) found no data.`);
+      } else {
+        showToast('success', 'Analysis completed successfully!');
+      }
       
       // Reload history after successful analysis (results are already saved by backend)
       loadUserHistory();
@@ -278,6 +298,38 @@ function App() {
     setShowDetailsModal(true);
   };
 
+  // Function to determine status based on analysis results
+  const getServiceStatus = (service: ServiceType, results: AnalysisResults): AnalysisStatus => {
+    switch (service) {
+      case 'OCR':
+        if (!results.ocr || !results.ocr.text || results.ocr.text.trim() === '') {
+          return 'Failed';
+        }
+        return 'Success';
+      
+      case 'ProductCount':
+        if (!results.productCount || results.productCount.total === 0) {
+          return 'Failed';
+        }
+        return 'Success';
+      
+      case 'Freshness':
+        if (!results.freshness || !results.freshness.label || !results.freshness.score) {
+          return 'Failed';
+        }
+        return 'Success';
+      
+      case 'BrandRecognition':
+        if (!results.brand || !results.brand.matches || results.brand.matches.length === 0) {
+          return 'Failed';
+        }
+        return 'Success';
+      
+      default:
+        return 'Failed';
+    }
+  };
+
   const handleResultAction = (service: ServiceType, action: string) => {
     switch (action) {
       case 'copy':
@@ -297,6 +349,51 @@ function App() {
         link.download = `analysis-${service}-${Date.now()}.json`;
         link.click();
         URL.revokeObjectURL(url);
+        break;
+      case 'details':
+        // Show detailed analysis information
+        const serviceData = analysisResults?.results[service.toLowerCase() as keyof AnalysisResults];
+        if (serviceData) {
+          let detailsText = '';
+          
+          switch (service) {
+            case 'OCR':
+              const ocrData = serviceData as any;
+              detailsText = `OCR Analysis Details:\n\nExtracted Text: "${ocrData.text || 'No text found'}"\nText Boxes Detected: ${ocrData.boxes?.length || 0}\nProcessing Method: Multi-method OCR with preprocessing`;
+              break;
+            case 'ProductCount':
+              const countData = serviceData as any;
+              detailsText = `Product Count Details:\n\nTotal Objects: ${countData.total || 0}\nDetections: ${countData.detections?.length || 0}\nDetection Method: OpenCV with adaptive thresholding\nConfidence Filtering: Applied`;
+              break;
+            case 'Freshness':
+              const freshnessData = serviceData as any;
+              detailsText = `Freshness Analysis Details:\n\nFreshness Score: ${freshnessData.score || 'N/A'}\nClassification: ${freshnessData.label || 'Unknown'}\nModel: TensorFlow CNN (224x224)\nAnalysis Regions: ${freshnessData.regions?.length || 0}`;
+              break;
+            case 'BrandRecognition':
+              const brandData = serviceData as any;
+              const matches = brandData.matches || [];
+              detailsText = `Brand Recognition Details:\n\nBrands Detected: ${matches.length}\nDetection Method: Hybrid OCR + CLIP AI\nSupported Brands: 26 major brands\n\nMatches:\n${matches.map((m: any, i: number) => `${i+1}. ${m.brand} (${Math.round(m.confidence * 100)}% confidence)`).join('\n') || 'No brands detected'}`;
+              break;
+          }
+          
+          alert(detailsText);
+        } else {
+          showToast('info', `No detailed data available for ${service}`);
+        }
+        break;
+      case 'retry':
+        // Retry analysis for the specific service
+        if (!selectedFile && !capturedImage) {
+          showToast('error', 'No image available to retry analysis');
+          return;
+        }
+        
+        // Set only the failed service for retry
+        setSelectedServices([service]);
+        showToast('info', `Retrying ${service} analysis...`);
+        
+        // Trigger analysis with just this service
+        handleAnalyze();
         break;
     }
   };
@@ -796,7 +893,7 @@ function App() {
                     <ResultCard
                       key={service}
                       service={service}
-                      status="Success"
+                      status={getServiceStatus(service, analysisResults.results)}
                       result={analysisResults.results}
                       onAction={(action) => handleResultAction(service, action)}
                     />
@@ -845,7 +942,11 @@ function App() {
                           {new Date(item.metadata.processedAt).toLocaleString()}
                         </p>
                       </div>
-                      <span className="status-badge-success">{item.status}</span>
+                      <span className={`${
+                        item.status === 'Success' ? 'status-badge-success' :
+                        item.status === 'Warning' ? 'status-badge-warning' :
+                        'status-badge-error'
+                      }`}>{item.status}</span>
                     </div>
                     
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">

@@ -609,6 +609,51 @@ def capture_image():
                     'error': str(e)
                 }
 
+        # Determine overall status based on results
+        def determine_analysis_status(results, selected_services):
+            failed_services = []
+            successful_services = []
+            
+            for service in selected_services:
+                if service == 'ocr':
+                    ocr_data = results.get('ocr', {})
+                    if not ocr_data.get('text') or ocr_data.get('text') in ['No text detected', 'Error processing OCR']:
+                        failed_services.append('OCR')
+                    else:
+                        successful_services.append('OCR')
+                        
+                elif service == 'product_count':
+                    count_data = results.get('product_count', {})
+                    if count_data.get('total', 0) == 0:
+                        failed_services.append('ProductCount')
+                    else:
+                        successful_services.append('ProductCount')
+                        
+                elif service == 'freshness':
+                    freshness_data = results.get('freshness', {})
+                    if not freshness_data.get('label') or freshness_data.get('label') == 'Unknown':
+                        failed_services.append('Freshness')
+                    else:
+                        successful_services.append('Freshness')
+                        
+                elif service == 'brand':
+                    brand_data = results.get('brand', {})
+                    matches = brand_data.get('matches', [])
+                    if not matches or len(matches) == 0:
+                        failed_services.append('BrandRecognition')
+                    else:
+                        successful_services.append('BrandRecognition')
+            
+            # Determine overall status
+            if len(failed_services) == len(selected_services):
+                return 'Failed'
+            elif len(failed_services) > 0:
+                return 'Warning'
+            else:
+                return 'Success'
+        
+        analysis_status = determine_analysis_status(results, selected_services)
+        
         # Save to user history
         conn = sqlite3.connect('users.db')
         cursor = conn.cursor()
@@ -623,14 +668,14 @@ def capture_image():
             file_path,
             ','.join(selected_services),
             str(results),
-            'Success'
+            analysis_status
         ))
         conn.commit()
         conn.close()
 
         response = {
             'job_id': job_id,
-            'status': 'Success',
+            'status': analysis_status,
             'results': results,
             'metadata': {
                 'processed_at': datetime.datetime.now().isoformat()
